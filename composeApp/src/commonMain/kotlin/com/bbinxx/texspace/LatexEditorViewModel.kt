@@ -14,9 +14,24 @@ class LatexEditorViewModel : ViewModel() {
 
     private val _sourceCode = MutableStateFlow(
         """
-        \documentclass{article}
+        \documentclass[a4paper,11pt]{article}
+        \usepackage[utf8]{inputenc}
+        \usepackage{geometry}
+        \geometry{a4paper, margin=1in}
+
         \begin{document}
-        Hello, \textbf{TexSpace}!
+
+        \begin{center}
+            \Huge \textbf{BIBIN RAJU} \\
+            \normalsize Engineering Student $\cdot$ Open Source Enthusiast
+        \end{center}
+
+        \section*{Profile}
+        Passionate Kotlin Multiplatform developer building TexSpace!
+
+        \section*{Projects}
+        \textbf{TexSpace} -- A full LaTeX editor built with KMP and Compose.
+
         \end{document}
         """.trimIndent()
     )
