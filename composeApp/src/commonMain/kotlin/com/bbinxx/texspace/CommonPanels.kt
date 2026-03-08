@@ -3,6 +3,8 @@ package com.bbinxx.texspace
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.background
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -63,6 +65,8 @@ fun TextFieldEditorPanel(
         color = Color(0xFF1E1E1E) // VS Code / Overleaf Dark Editor Background
     ) {
         val lineCount = source.lines().size.coerceAtLeast(1)
+        val scrollState = rememberScrollState()
+
         Row(modifier = Modifier.fillMaxSize()) {
             // Line numbers
             Box(
@@ -72,11 +76,12 @@ fun TextFieldEditorPanel(
                     .background(Color(0xFF1E1E1E))
                     .padding(end = 8.dp)
             ) {
-                androidx.compose.foundation.lazy.LazyColumn(
-                    modifier = Modifier.padding(top = 16.dp),
+                // Synchronize line numbers with text scroll
+                Column(
+                    modifier = Modifier.padding(top = 16.dp).verticalScroll(scrollState),
                     horizontalAlignment = Alignment.End
                 ) {
-                    items(lineCount) { index ->
+                    repeat(lineCount) { index ->
                         Text(
                             text = (index + 1).toString(),
                             style = TextStyle(
@@ -102,7 +107,11 @@ fun TextFieldEditorPanel(
                 ),
                 cursorBrush = SolidColor(Color.White),
                 visualTransformation = LatexVisualTransformation(),
-                modifier = Modifier.padding(top = 16.dp, start = 8.dp, end = 16.dp).weight(1f).fillMaxHeight()
+                modifier = Modifier
+                    .padding(top = 16.dp, start = 8.dp, end = 16.dp)
+                    .weight(1f)
+                    .fillMaxHeight()
+                    .verticalScroll(scrollState)
             )
         }
     }
@@ -114,14 +123,14 @@ fun FallbackPdfPreviewPanel(
     modifier: Modifier = Modifier
 ) {
     Box(modifier = modifier.fillMaxSize().background(Color(0xFF525659)), contentAlignment = Alignment.Center) {
-        if (pdfBase64 != null) {
+        if (!pdfBase64.isNullOrEmpty()) {
             Surface(
                 modifier = Modifier.padding(32.dp).aspectRatio(0.707f).fillMaxHeight(),
                 color = Color.White,
                 shadowElevation = 8.dp
             ) {
                 Box(contentAlignment = Alignment.Center) {
-                    Text("PDF Preview Available\n(Rendering via PDFBox)", color = Color.Black)
+                    Text("PDF Preview Available\n(Rendering via Native Engine)", color = Color.Black)
                 }
             }
         } else {

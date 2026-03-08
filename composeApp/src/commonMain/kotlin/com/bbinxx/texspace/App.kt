@@ -60,60 +60,123 @@ fun MainLayout(viewModel: LatexEditorViewModel) {
     val compiledPdfBase64 by viewModel.compiledPdfBase64.collectAsState()
 
     val currentFile = files.find { it.id == selectedFileId }
+    var activeTab by remember { mutableStateOf(0) } // 0: Editor, 1: Preview, 2: Files
 
-    Column(modifier = Modifier.fillMaxSize().onKeyEvent { 
-        if (it.isCtrlPressed) {
-            when (it.key) {
-                Key.S -> { viewModel.save(); true }
-                Key.Enter -> { viewModel.compile(); true }
-                else -> false
+    BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+        val isMobile = maxWidth < 600.dp
+
+        if (isMobile) {
+            Scaffold(
+                bottomBar = {
+                    NavigationBar(containerColor = SidebarRailBg) {
+                        NavigationBarItem(
+                            selected = activeTab == 2,
+                            onClick = { activeTab = 2 },
+                            icon = { Icon(Icons.Default.Folder, null) },
+                            label = { Text("Files") }
+                        )
+                        NavigationBarItem(
+                            selected = activeTab == 0,
+                            onClick = { activeTab = 0 },
+                            icon = { Icon(Icons.Default.Edit, null) },
+                            label = { Text("Edit") }
+                        )
+                        NavigationBarItem(
+                            selected = activeTab == 1,
+                            onClick = { activeTab = 1 },
+                            icon = { Icon(Icons.Default.Visibility, null) },
+                            label = { Text("Preview") }
+                        )
+                    }
+                }
+            ) { padding ->
+                Box(modifier = Modifier.padding(padding).fillMaxSize()) {
+                    when (activeTab) {
+                        2 -> FileTreePanel(
+                            files = files,
+                            selectedFileId = selectedFileId,
+                            onFileSelected = { viewModel.selectFile(it); activeTab = 0 },
+                            onCreateFile = { viewModel.createFile() },
+                            onDeleteFile = { viewModel.deleteFile(it) },
+                            onRenameFile = { id, name -> viewModel.renameFile(id, name) },
+                            onMinimize = {},
+                            modifier = Modifier.fillMaxSize()
+                        )
+                        0 -> Column(modifier = Modifier.fillMaxSize()) {
+                            HeaderRow(title = currentFile?.name ?: "", isEditor = true)
+                            EditorPanel(
+                                source = currentFile?.content ?: "",
+                                onSourceChange = { viewModel.updateSource(it) },
+                                modifier = Modifier.weight(1f).fillMaxSize()
+                            )
+                        }
+                        1 -> Column(modifier = Modifier.fillMaxSize()) {
+                            HeaderRow(
+                                title = "Preview", 
+                                isEditor = false, 
+                                onRecompile = { viewModel.compile() },
+                                onExport = { viewModel.exportPdf() },
+                                isCompiling = isCompiling
+                            )
+                            PdfPreviewPanel(
+                                pdfBase64 = compiledPdfBase64,
+                                modifier = Modifier.weight(1f).fillMaxSize().background(Color.White)
+                            )
+                            BottomLogPanel(compilationLog, modifier = Modifier.height(100.dp))
+                        }
+                    }
+                }
             }
-        } else false
-    }) {
-        Row(modifier = Modifier.weight(1f)) {
-            // 1. LEFT SIDEBAR RAIL
-            SidebarRail(onMenuClick = { viewModel.toggleFileTree() })
+        } else {
+            // Desktop Layout
+            Row(modifier = Modifier.fillMaxSize().onKeyEvent { 
+                if (it.isCtrlPressed) {
+                    when (it.key) {
+                        Key.S -> { viewModel.save(); true }
+                        Key.Enter -> { viewModel.compile(); true }
+                        else -> false
+                    }
+                } else false
+            }) {
+                SidebarRail(onMenuClick = { viewModel.toggleFileTree() })
 
-            // 2. FILE TREE PANEL
-            if (isFileTreeVisible) {
-                FileTreePanel(
-                    files = files,
-                    selectedFileId = selectedFileId,
-                    onFileSelected = { viewModel.selectFile(it) },
-                    onCreateFile = { viewModel.createFile() },
-                    onDeleteFile = { viewModel.deleteFile(it) },
-                    onRenameFile = { id, name -> viewModel.renameFile(id, name) },
-                    onMinimize = { viewModel.toggleFileTree() }
-                )
-            }
-
-            // 3. EDITOR PANEL (Center)
-            Column(modifier = Modifier.weight(1f).fillMaxHeight()) {
-                HeaderRow(title = currentFile?.name ?: "", isEditor = true)
-                Column(modifier = Modifier.weight(1f)) {
-                    EditorPanel(
-                        source = currentFile?.content ?: "",
-                        onSourceChange = { viewModel.updateSource(it) },
-                        modifier = Modifier.fillMaxSize()
+                if (isFileTreeVisible) {
+                    FileTreePanel(
+                        files = files,
+                        selectedFileId = selectedFileId,
+                        onFileSelected = { viewModel.selectFile(it) },
+                        onCreateFile = { viewModel.createFile() },
+                        onDeleteFile = { viewModel.deleteFile(it) },
+                        onRenameFile = { id, name -> viewModel.renameFile(id, name) },
+                        onMinimize = { viewModel.toggleFileTree() }
                     )
                 }
-                // BOTTOM LOG PANEL
-                BottomLogPanel(compilationLog)
-            }
 
-            // 4. PREVIEW PANEL (Right)
-            Column(modifier = Modifier.weight(1f).fillMaxHeight()) {
-                HeaderRow(
-                    title = "Preview", 
-                    isEditor = false, 
-                    onRecompile = { viewModel.compile() },
-                    onExport = { viewModel.exportPdf() },
-                    isCompiling = isCompiling
-                )
-                PdfPreviewPanel(
-                    pdfBase64 = compiledPdfBase64,
-                    modifier = Modifier.weight(1f).fillMaxSize().background(Color.White)
-                )
+                Column(modifier = Modifier.weight(1f).fillMaxHeight()) {
+                    HeaderRow(title = currentFile?.name ?: "", isEditor = true)
+                    Column(modifier = Modifier.weight(1f)) {
+                        EditorPanel(
+                            source = currentFile?.content ?: "",
+                            onSourceChange = { viewModel.updateSource(it) },
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    }
+                    BottomLogPanel(compilationLog)
+                }
+
+                Column(modifier = Modifier.weight(1f).fillMaxHeight()) {
+                    HeaderRow(
+                        title = "Preview", 
+                        isEditor = false, 
+                        onRecompile = { viewModel.compile() },
+                        onExport = { viewModel.exportPdf() },
+                        isCompiling = isCompiling
+                    )
+                    PdfPreviewPanel(
+                        pdfBase64 = compiledPdfBase64,
+                        modifier = Modifier.weight(1f).fillMaxSize().background(Color.White)
+                    )
+                }
             }
         }
     }
@@ -205,11 +268,12 @@ fun FileTreePanel(
     onCreateFile: () -> Unit,
     onDeleteFile: (String) -> Unit,
     onRenameFile: (String, String) -> Unit,
-    onMinimize: () -> Unit
+    onMinimize: () -> Unit,
+    modifier: Modifier = Modifier.width(220.dp)
 ) {
     Surface(
         color = SidebarBg,
-        modifier = Modifier.width(220.dp).fillMaxHeight()
+        modifier = modifier.fillMaxHeight()
     ) {
         Column(modifier = Modifier.padding(8.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -324,11 +388,10 @@ fun FileItem(
 }
 
 @Composable
-fun BottomLogPanel(log: String) {
+fun BottomLogPanel(log: String, modifier: Modifier = Modifier.fillMaxWidth().height(120.dp)) {
     Surface(
         color = Color(0xFF131516),
-        modifier = Modifier.fillMaxWidth().height(120.dp)
-            .border(0.5.dp, Color.Black.copy(0.3f))
+        modifier = modifier.border(0.5.dp, Color.Black.copy(0.3f))
     ) {
         Column(modifier = Modifier.padding(8.dp)) {
             Text("LOGS", fontWeight = FontWeight.Bold, fontSize = 11.sp, color = Color.Gray)

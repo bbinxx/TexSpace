@@ -10,7 +10,18 @@ import io.ktor.http.contentType
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.serialization.json.Json
 
-class LatexClient(private val baseUrl: String = "http://localhost:8080") {
+class LatexClient {
+    // Determine the base URL dynamically
+    private val hostIp = "10.3.4.163" // Your machine's shared IP
+    
+    private val baseUrl: String by lazy {
+        val platform = getPlatform().name.lowercase()
+        when {
+            platform.contains("android") -> "http://$hostIp:$SERVER_PORT"
+            else -> "http://localhost:$SERVER_PORT"
+        }
+    }
+
     private val client = HttpClient {
         install(ContentNegotiation) {
             json(Json {
@@ -31,7 +42,7 @@ class LatexClient(private val baseUrl: String = "http://localhost:8080") {
         } catch (e: Exception) {
             CompileResponse(
                 pdfBase64 = null,
-                log = "Connection error: ${e.message}",
+                log = "Connection error to $baseUrl: ${e.message}",
                 errors = listOf(LatexError(null, "Failed to connect to compilation server."))
             )
         }
