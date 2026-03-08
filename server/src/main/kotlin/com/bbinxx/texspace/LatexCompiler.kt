@@ -18,7 +18,7 @@ object LatexCompiler {
         if (!hasPdflatex) {
             return CompileResponse(
                 pdfBase64 = null,
-                log = "Error: 'pdflatex' not found on system.\n\nPlease install it using:\nsudo apt install texlive-latex-base",
+                log = "Error: 'pdflatex' not found on system.\n\nPlease install it using:\nsudo apt install texlive-latex-base texlive-latex-extra texlive-fonts-recommended",
                 errors = listOf(LatexError(null, "pdflatex not found"))
             )
         }
@@ -62,6 +62,18 @@ object LatexCompiler {
             } else null
 
             val errors = parseLogForErrors(logOutput)
+
+            val exitCode = process.exitValue()
+            if (exitCode != 0 && base64Pdf == null) {
+                if (logOutput.contains("! LaTeX Error: File")) {
+                    val missingPackage = logOutput.substringAfter("! LaTeX Error: File `").substringBefore(".sty' not found.")
+                    val enhancedLog = logOutput + "\n\n--- SUGESTION ---\n" +
+                        "It looks like you're missing the package: $missingPackage.sty\n" +
+                        "Try installing extra packages:\n" +
+                        "sudo apt install texlive-latex-extra texlive-fonts-recommended"
+                    return CompileResponse(null, enhancedLog, parseLogForErrors(logOutput))
+                }
+            }
 
             return CompileResponse(
                 pdfBase64 = base64Pdf,

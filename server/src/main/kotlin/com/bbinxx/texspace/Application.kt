@@ -11,7 +11,9 @@ import kotlinx.serialization.json.Json
 import io.ktor.server.plugins.contentnegotiation.*
 import io.ktor.server.plugins.cors.routing.*
 import io.ktor.http.HttpMethod
+import io.ktor.http.HttpStatusCode
 import io.ktor.server.request.*
+import kotlinx.serialization.decodeFromString
 
 fun main() {
     embeddedServer(Netty, port = SERVER_PORT, host = "0.0.0.0", module = Application::module)
@@ -25,11 +27,14 @@ fun Application.module() {
         allowHeader(io.ktor.http.HttpHeaders.ContentType)
     }
 
+    val jsonConfig = Json {
+        prettyPrint = true
+        isLenient = true
+        ignoreUnknownKeys = true
+    }
+
     install(ContentNegotiation) {
-        json(Json {
-            prettyPrint = true
-            isLenient = true
-        })
+        json(jsonConfig)
     }
     
     routing {
@@ -37,9 +42,21 @@ fun Application.module() {
             call.respondText("TexSpace Backend is running.")
         }
         post("/compile") {
-            val request = call.receive<CompileRequest>()
-            val response = LatexCompiler.compile(request)
-            call.respond(response)
+            try {
+                // Manually receive as text if receive<T> fails due to Ktor 3 transform issues
+                val bodyText = call.receiveText()
+                val request = jsonConfig.decodeFromString<CompileRequest>(bodyText)
+                
+                val response = LatexCompiler.compile(request)
+                call.respond(response)
+            } catch (e: Exception) {
+                // If it fails, maybe it's missing pdflatex or packages
+                call.respond(HttpStatusCode.OK, CompileResponse(
+                    pdfBase64 = null,
+                    log = "Server Logic Error: ${e.message}\n${e.stackTraceToString()}",
+                    errors = listOf(LatexError(null, e.message ?: "Unknown error"))
+                ))
+            }
         }
     }
 }
