@@ -10,17 +10,7 @@ import io.ktor.http.contentType
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.serialization.json.Json
 
-class LatexClient {
-    // Determine the base URL dynamically
-    private val hostIp = "10.3.4.163" // Your machine's shared IP
-    
-    private val baseUrl: String by lazy {
-        val platform = getPlatform().name.lowercase()
-        when {
-            platform.contains("android") -> "http://$hostIp:$SERVER_PORT"
-            else -> "http://localhost:$SERVER_PORT"
-        }
-    }
+class LatexClient(var baseUrl: String) {
 
     private val client = HttpClient {
         install(ContentNegotiation) {

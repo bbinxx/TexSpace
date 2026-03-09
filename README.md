@@ -1,95 +1,57 @@
-This is a Kotlin Multiplatform project targeting Android, iOS, Web, Desktop (JVM), Server.
+# TexSpace
 
-* [/composeApp](./composeApp/src) is for code that will be shared across your Compose Multiplatform applications.
-  It contains several subfolders:
-  - [commonMain](./composeApp/src/commonMain/kotlin) is for code that’s common for all targets.
-  - Other folders are for Kotlin code that will be compiled for only the platform indicated in the folder name.
-    For example, if you want to use Apple’s CoreCrypto for the iOS part of your Kotlin app,
-    the [iosMain](./composeApp/src/iosMain/kotlin) folder would be the right place for such calls.
-    Similarly, if you want to edit the Desktop (JVM) specific part, the [jvmMain](./composeApp/src/jvmMain/kotlin)
-    folder is the appropriate location.
+TexSpace is a fully-functional, cross-platform LaTeX IDE and PDF preview application built with [Kotlin Multiplatform](https://kotlinlang.org/docs/multiplatform.html) and [Compose Multiplatform](https://www.jetbrains.com/lp/compose-multiplatform/). 
+Designed to provide an Overleaf-like experience cleanly and natively on your devices, TexSpace supports multi-file projects, local LaTeX compilation, real-time PDF rendering, and flexible file management.
 
-* [/iosApp](./iosApp/iosApp) contains iOS applications. Even if you’re sharing your UI with Compose Multiplatform,
-  you need this entry point for your iOS app. This is also where you should add SwiftUI code for your project.
+## Features
 
-* [/server](./server/src/main/kotlin) is for the Ktor server application.
+- **Cross-Platform**: Available on Android, iOS, Desktop (JVM), Web, and supported by a Kotlin Server backend.
+- **Local LaTeX Compilation**: Compile your LaTeX documents right on your device for lightning-fast feedback without relying on a constant internet connection.
+- **Integrated PDF Preview**: Instantly view the compiled PDF alongside your LaTeX source code.
+- **Multi-File Support**: Handle complex documents effortlessly. Manage multiple `.tex` files, references, and images in a unified project structure.
+- **Robust File Management**: Organize, create, delete, and structure your LaTeX workspace with a built-in file manager.
 
-* [/shared](./shared/src) is for the code that will be shared between all targets in the project.
-  The most important subfolder is [commonMain](./shared/src/commonMain/kotlin). If preferred, you
-  can add code to the platform-specific folders here too.
+## Project Structure
 
-### Build and Run Android Application
+* `composeApp`: Shared UI layout and components powered by Compose Multiplatform. Contains targets for Android, Desktop, Web, and iOS shared UI.
+* `iosApp`: The iOS application entry point, containing Xcode project files and SwiftUI wrappers.
+* `server`: The Ktor-based backend server application.
+* `shared`: The core shared codebase containing business logic, state management, and the `TexSpaceRepository` database (powered by SQLDelight).
 
-To build and run the development version of the Android app, use the run configuration from the run widget
-in your IDE’s toolbar or build it directly from the terminal:
-- on macOS/Linux
-  ```shell
-  ./gradlew :composeApp:assembleDebug
-  ```
-- on Windows
-  ```shell
-  .\gradlew.bat :composeApp:assembleDebug
-  ```
+## Getting Started
 
-### Build and Run Desktop (JVM) Application
+### Prerequisites
 
-To build and run the development version of the desktop app, use the run configuration from the run widget
-in your IDE’s toolbar or run it directly from the terminal:
-- on macOS/Linux
-  ```shell
-  ./gradlew :composeApp:run
-  ```
-- on Windows
-  ```shell
-  .\gradlew.bat :composeApp:run
-  ```
+- JDK 17 or higher
+- Android Studio or IntelliJ IDEA (with Kotlin Multiplatform plugins enabled)
+- Xcode (for iOS development, macOS only)
+- A local LaTeX distribution (like TeX Live, MacTeX, or MiKTeX) installed and available in your system path for local rendering.
 
-### Build and Run Server
+### Building & Running
 
-To build and run the development version of the server, use the run configuration from the run widget
-in your IDE’s toolbar or run it directly from the terminal:
-- on macOS/Linux
-  ```shell
-  ./gradlew :server:run
-  ```
-- on Windows
-  ```shell
-  .\gradlew.bat :server:run
-  ```
+You can run the application for various targets using the provided Gradle wrapper from your terminal or via your IDE's run configurations.
 
-### Build and Run Web Application
+**Android**
+```shell
+./gradlew :composeApp:assembleDebug
+```
 
-To build and run the development version of the web app, use the run configuration from the run widget
-in your IDE's toolbar or run it directly from the terminal:
-- for the Wasm target (faster, modern browsers):
-  - on macOS/Linux
-    ```shell
-    ./gradlew :composeApp:wasmJsBrowserDevelopmentRun
-    ```
-  - on Windows
-    ```shell
-    .\gradlew.bat :composeApp:wasmJsBrowserDevelopmentRun
-    ```
-- for the JS target (slower, supports older browsers):
-  - on macOS/Linux
-    ```shell
-    ./gradlew :composeApp:jsBrowserDevelopmentRun
-    ```
-  - on Windows
-    ```shell
-    .\gradlew.bat :composeApp:jsBrowserDevelopmentRun
-    ```
+**Desktop (JVM)**
+```shell
+./gradlew :composeApp:run
+```
 
-### Build and Run iOS Application
+**Server**
+```shell
+./gradlew :server:run
+```
 
-To build and run the development version of the iOS app, use the run configuration from the run widget
-in your IDE’s toolbar or open the [/iosApp](./iosApp) directory in Xcode and run it from there.
+**Web (Wasm / JS)**
+```shell
+./gradlew :composeApp:wasmJsBrowserDevelopmentRun
+# OR for JS target
+./gradlew :composeApp:jsBrowserDevelopmentRun
+```
 
----
-
-Learn more about [Kotlin Multiplatform](https://www.jetbrains.com/help/kotlin-multiplatform-dev/get-started.html),
-[Compose Multiplatform](https://github.com/JetBrains/compose-multiplatform/#compose-multiplatform),
-[Kotlin/Wasm](https://kotl.in/wasm/)…
-
-We would appreciate your feedback on Compose/Web and Kotlin/Wasm in the public Slack channel [#compose-web](https://slack-chats.kotlinlang.org/c/compose-web).
-If you face any issues, please report them on [YouTrack](https://youtrack.jetbrains.com/newIssue?project=CMP).
+**iOS**
+Open the `iosApp` folder in Xcode and launch it from there, or use the respective IDE run configuration if available.
