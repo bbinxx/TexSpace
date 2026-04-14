@@ -9,6 +9,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import io.ktor.util.decodeBase64Bytes
+import okio.FileSystem
+import okio.Path.Companion.toPath
 import kotlin.random.Random
 
 enum class Screen {
@@ -34,6 +37,9 @@ class LatexEditorViewModel(
 
     private val _rootPath = MutableStateFlow("")
     val rootPath: StateFlow<String> = _rootPath.asStateFlow()
+
+    private val _downloadPath = MutableStateFlow("")
+    val downloadPath: StateFlow<String> = _downloadPath.asStateFlow()
 
     private val _files = MutableStateFlow<List<LatexFile>>(emptyList())
     val files: StateFlow<List<LatexFile>> = _files.asStateFlow()
@@ -63,13 +69,16 @@ class LatexEditorViewModel(
                 if (savedRoot != null) {
                     _rootPath.value = savedRoot
                     projectRepository.setRootPath(savedRoot)
-                } else {
-                    // Default path for demo/first run
-                    val default = ""
-                    _rootPath.value = default
                 }
             } catch (e: Exception) {
                 println("ViewModel Init Error: ${e.message}")
+            }
+        }
+
+        viewModelScope.launch {
+            val savedDownload = repository.getSetting("download_path")
+            if (savedDownload != null) {
+                _downloadPath.value = savedDownload
             }
         }
 
@@ -90,11 +99,27 @@ class LatexEditorViewModel(
         }
     }
 
+    fun updateDownloadPath(path: String) {
+        viewModelScope.launch {
+            _downloadPath.value = path
+            repository.setSetting("download_path", path)
+        }
+    }
+
     fun createProject(name: String) {
         viewModelScope.launch {
             val project = projectRepository.createProject(name)
             if (project != null) {
                 openProject(project)
+            }
+        }
+    }
+
+    fun deleteProject(project: LatexProject) {
+        viewModelScope.launch {
+            projectRepository.deleteProject(project)
+            if (_selectedProject.value?.id == project.id) {
+                goBackToDashboard()
             }
         }
     }
@@ -134,18 +159,23 @@ class LatexEditorViewModel(
         _selectedFileId.value = fileId
     }
 
-    fun createFile() {
+    fun createFile(name: String = "") {
         val currentProject = _selectedProject.value ?: return
-        val newName = "new_file_${_files.value.size}.tex"
+        val newName = if (name.isBlank()) "new_file_${_files.value.size}.tex" else name
         viewModelScope.launch {
-            // In a real app we'd prompt for name, but here we just create it
-            // We need to update ProjectRepository to handle file creation within a project better
-            // For now, let's just use the file path
             val path = "${currentProject.path}/$newName"
-            val newFile = LatexFile(path, newName, "% New LaTeX file")
+            val newFile = LatexFile(path, newName, "% New LaTeX file\n\\documentclass{article}\n\\begin{document}\n\n\\end{document}")
             projectRepository.saveFile(newFile)
             _files.value = projectRepository.getFiles(currentProject)
             _selectedFileId.value = path
+        }
+    }
+
+    fun addExistingFile(sourcePath: String) {
+        val currentProject = _selectedProject.value ?: return
+        viewModelScope.launch {
+            projectRepository.copyFileToProject(currentProject, sourcePath)
+            _files.value = projectRepository.getFiles(currentProject)
         }
     }
 
@@ -157,6 +187,8 @@ class LatexEditorViewModel(
             _files.value = projectRepository.getFiles(currentProject)
             if (_selectedFileId.value == fileId && _files.value.isNotEmpty()) {
                 _selectedFileId.value = _files.value.first().id
+            } else if (_files.value.isEmpty()) {
+                _selectedFileId.value = ""
             }
         }
     }
@@ -211,6 +243,33 @@ class LatexEditorViewModel(
     }
 
     fun exportPdf() {
-        _compilationLog.value = "PDF export simulated."
+        val pdfBase64 = _compiledPdfBase64.value ?: return
+        val currentProject = _selectedProject.value ?: return
+        val downloadPath = _downloadPath.value.ifBlank { _rootPath.value }
+        if (downloadPath.isBlank()) {
+            _compilationLog.value = "Error: Set download path in settings."
+            return
+        }
+
+        viewModelScope.launch {
+            try {
+                val fs = FileSystem.SYSTEM
+                val destDir = downloadPath.toPath()
+                if (!fs.exists(destDir)) fs.createDirectories(destDir)
+                
+                val fileName = "${currentProject.name}_export.pdf"
+                val destFile = destDir / fileName
+                
+                // Decode base64
+                val bytes = pdfBase64.decodeBase64Bytes()
+                
+                fs.write(destFile) {
+                    write(bytes)
+                }
+                _compilationLog.value = "PDF exported to: $destFile"
+            } catch (e: Exception) {
+                _compilationLog.value = "Export failed: ${e.message}"
+            }
+        }
     }
 }

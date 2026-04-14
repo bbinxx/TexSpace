@@ -118,6 +118,28 @@ class ProjectRepository(
         }
     }
 
+    suspend fun deleteProject(project: LatexProject) = withContext(Dispatchers.IO) {
+        try {
+            val path = project.path.toPath()
+            fileSystem.deleteRecursively(path)
+            refreshProjects()
+        } catch (e: Exception) {
+            println("Error deleting project: ${e.message}")
+        }
+    }
+
+    suspend fun copyFileToProject(project: LatexProject, sourcePath: String) = withContext(Dispatchers.IO) {
+        try {
+            val projectDir = project.path.toPath()
+            val sourceFile = sourcePath.toPath()
+            val destFile = projectDir / sourceFile.name
+            fileSystem.copy(sourceFile, destFile)
+            refreshProjects()
+        } catch (e: Exception) {
+            println("Error copying file: ${e.message}")
+        }
+    }
+
     suspend fun getFiles(project: LatexProject): List<LatexFile> = withContext(Dispatchers.IO) {
         try {
             val path = project.path.toPath()
