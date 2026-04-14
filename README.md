@@ -1,8 +1,12 @@
+<p align="center">
+  <img src="assets/icon.svg" width="128" height="128" alt="TexSpace Icon">
+</p>
+
 # TexSpace — Professional LaTeX IDE
 
 TexSpace is a professional, cross-platform LaTeX IDE and PDF preview application built with **Kotlin Multiplatform** and **Compose Multiplatform**. It brings a desktop-grade LaTeX editing experience to Android, iOS, JVM, and Web, with a focus on local file management and rapid compilation.
 
-![v1.2.0](https://img.shields.io/badge/version-1.2.0-green.svg)
+![v2.2.0](https://img.shields.io/badge/version-2.2.0-green.svg)
 ![KMP](https://img.shields.io/badge/Kotlin-Multiplatform-blue.svg)
 ![Compose](https://img.shields.io/badge/Compose-Multiplatform-orange.svg)
 

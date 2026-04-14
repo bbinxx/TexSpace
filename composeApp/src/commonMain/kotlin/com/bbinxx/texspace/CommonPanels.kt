@@ -26,6 +26,9 @@ import androidx.compose.ui.text.input.*
 import androidx.compose.ui.text.style.*
 import androidx.compose.ui.unit.*
 
+@Composable
+expect fun getPlatformTextStyle(): PlatformTextStyle?
+
 // ─── IDE THEME TOKENS ────────────────────────────────────────────────────────
 private val EditorBg        = Color(0xFF0D0F1A)
 private val GutterBg        = Color(0xFF0B0D16)
@@ -522,7 +525,7 @@ fun TextFieldEditorPanel(
                                 .height(20.dp)
                                 .wrapContentHeight(Alignment.CenterVertically),
                             style = TextStyle(
-                                platformStyle = PlatformTextStyle(includeFontPadding = false),
+                                platformStyle = getPlatformTextStyle(),
                                 lineHeightStyle = LineHeightStyle(
                                     alignment = LineHeightStyle.Alignment.Center,
                                     trim = LineHeightStyle.Trim.None
@@ -565,7 +568,7 @@ fun TextFieldEditorPanel(
                         fontSize      = 14.sp,
                         lineHeight    = 20.sp,
                         letterSpacing = 0.3.sp,
-                        platformStyle = PlatformTextStyle(includeFontPadding = false),
+                        platformStyle = getPlatformTextStyle(),
                         lineHeightStyle = LineHeightStyle(
                             alignment = LineHeightStyle.Alignment.Center,
                             trim = LineHeightStyle.Trim.None

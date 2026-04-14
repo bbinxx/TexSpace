@@ -279,7 +279,7 @@ class LatexEditorViewModel(
 
         viewModelScope.launch {
             try {
-                val fs = FileSystem.SYSTEM
+                val fs = defaultFileSystem
                 val destDir = downloadPath.toPath()
                 if (!fs.exists(destDir)) fs.createDirectories(destDir)
                 

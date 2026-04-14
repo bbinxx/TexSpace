@@ -12,6 +12,10 @@ import androidx.compose.ui.unit.dp
 import org.apache.pdfbox.Loader
 import org.apache.pdfbox.rendering.PDFRenderer
 import java.util.Base64
+import androidx.compose.ui.text.PlatformTextStyle
+
+@Composable
+actual fun getPlatformTextStyle(): PlatformTextStyle? = null
 
 @Composable
 actual fun EditorPanel(
