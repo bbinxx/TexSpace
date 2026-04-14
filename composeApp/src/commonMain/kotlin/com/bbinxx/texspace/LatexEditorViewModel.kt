@@ -8,37 +8,32 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlin.random.Random
 
+enum class Screen {
+    DASHBOARD,
+    EDITOR
+}
+
 class LatexEditorViewModel(
     private val repository: TexSpaceRepository,
+    private val projectRepository: ProjectRepository,
     initialBaseUrl: String
 ) : ViewModel() {
     private val client = LatexClient(initialBaseUrl)
 
-    private val defaultContent = """
-        \documentclass[a4paper,11pt]{article}
-        \usepackage[utf8]{inputenc}
-        \usepackage{geometry}
-        \geometry{a4paper, margin=1in}
+    private val _currentScreen = MutableStateFlow(Screen.DASHBOARD)
+    val currentScreen: StateFlow<Screen> = _currentScreen.asStateFlow()
 
-        \begin{document}
+    private val _projects = projectRepository.projects
+    val projects: StateFlow<List<LatexProject>> = _projects
 
-        \begin{center}
-            \Huge \textbf{BIBIN RAJU} \\
-            \normalsize Engineering Student $\cdot$ Open Source Enthusiast
-        \end{center}
+    private val _selectedProject = MutableStateFlow<LatexProject?>(null)
+    val selectedProject: StateFlow<LatexProject?> = _selectedProject.asStateFlow()
 
-        \section*{Profile}
-        Passionate Kotlin Multiplatform developer building TexSpace!
-
-        \section*{Projects}
-        \textbf{TexSpace} -- A full LaTeX editor built with KMP and Compose.
-
-        \end{document}
-    """.trimIndent()
+    private val _rootPath = MutableStateFlow("")
+    val rootPath: StateFlow<String> = _rootPath.asStateFlow()
 
     private val _files = MutableStateFlow<List<LatexFile>>(emptyList())
     val files: StateFlow<List<LatexFile>> = _files.asStateFlow()
@@ -61,32 +56,23 @@ class LatexEditorViewModel(
     private val _serverAddress = MutableStateFlow(initialBaseUrl)
     val serverAddress: StateFlow<String> = _serverAddress.asStateFlow()
 
-    private val _totalPages = MutableStateFlow(1)
-    val totalPages: StateFlow<Int> = _totalPages.asStateFlow()
-
-    private val _currentPage = MutableStateFlow(1)
-    val currentPage: StateFlow<Int> = _currentPage.asStateFlow()
-
-    val currentFileContent: String
-        get() = _files.value.find { it.id == _selectedFileId.value }?.content ?: ""
-
     init {
         viewModelScope.launch {
-            // Load files from repo
-            repository.getAllFiles().collect {
-                if (it.isEmpty()) {
-                    val firstId = "1"
-                    repository.createFile(firstId, "main.tex", defaultContent)
-                    _selectedFileId.value = firstId
+            try {
+                val savedRoot = repository.getSetting("root_path")
+                if (savedRoot != null) {
+                    _rootPath.value = savedRoot
+                    projectRepository.setRootPath(savedRoot)
                 } else {
-                    _files.value = it
-                    if (_selectedFileId.value.isEmpty()) {
-                        _selectedFileId.value = it.first().id
-                    }
+                    // Default path for demo/first run
+                    val default = ""
+                    _rootPath.value = default
                 }
+            } catch (e: Exception) {
+                println("ViewModel Init Error: ${e.message}")
             }
         }
-        
+
         viewModelScope.launch {
             val savedServer = repository.getSetting("server_address")
             if (savedServer != null) {
@@ -96,13 +82,51 @@ class LatexEditorViewModel(
         }
     }
 
+    fun updateRootPath(path: String) {
+        viewModelScope.launch {
+            _rootPath.value = path
+            repository.setSetting("root_path", path)
+            projectRepository.setRootPath(path)
+        }
+    }
+
+    fun createProject(name: String) {
+        viewModelScope.launch {
+            val project = projectRepository.createProject(name)
+            if (project != null) {
+                openProject(project)
+            }
+        }
+    }
+
+    fun openProject(project: LatexProject) {
+        viewModelScope.launch {
+            _selectedProject.value = project
+            val projectFiles = projectRepository.getFiles(project)
+            _files.value = projectFiles
+            if (projectFiles.isNotEmpty()) {
+                val mainFile = projectFiles.find { it.name == "main.tex" }
+                _selectedFileId.value = mainFile?.id ?: projectFiles.first().id
+            }
+            _currentScreen.value = Screen.EDITOR
+        }
+    }
+
+    fun goBackToDashboard() {
+        _currentScreen.value = Screen.DASHBOARD
+        _selectedProject.value = null
+        _files.value = emptyList()
+    }
+
     fun updateSource(newSource: String) {
         _files.value = _files.value.map {
             if (it.id == _selectedFileId.value) it.copy(content = newSource) else it
         }
-        // Auto-save debounced would be better, but for now manual or on change
         viewModelScope.launch {
-            repository.updateFileContent(_selectedFileId.value, newSource)
+            val currentFile = _files.value.find { it.id == _selectedFileId.value }
+            if (currentFile != null) {
+                projectRepository.saveFile(currentFile)
+            }
         }
     }
 
@@ -111,27 +135,39 @@ class LatexEditorViewModel(
     }
 
     fun createFile() {
-        val newId = "file_${Random.nextLong()}_${System.currentTimeMillis()}"
+        val currentProject = _selectedProject.value ?: return
         val newName = "new_file_${_files.value.size}.tex"
         viewModelScope.launch {
-            repository.createFile(newId, newName, "% New LaTeX file")
-            _selectedFileId.value = newId
+            // In a real app we'd prompt for name, but here we just create it
+            // We need to update ProjectRepository to handle file creation within a project better
+            // For now, let's just use the file path
+            val path = "${currentProject.path}/$newName"
+            val newFile = LatexFile(path, newName, "% New LaTeX file")
+            projectRepository.saveFile(newFile)
+            _files.value = projectRepository.getFiles(currentProject)
+            _selectedFileId.value = path
         }
     }
 
     fun deleteFile(fileId: String) {
-        if (_files.value.size <= 1) return
+        val file = _files.value.find { it.id == fileId } ?: return
         viewModelScope.launch {
-            repository.deleteFile(fileId)
-            if (_selectedFileId.value == fileId) {
-                _selectedFileId.value = _files.value.first { it.id != fileId }.id
+            projectRepository.deleteFile(file)
+            val currentProject = _selectedProject.value ?: return@launch
+            _files.value = projectRepository.getFiles(currentProject)
+            if (_selectedFileId.value == fileId && _files.value.isNotEmpty()) {
+                _selectedFileId.value = _files.value.first().id
             }
         }
     }
 
     fun renameFile(fileId: String, newName: String) {
+        val file = _files.value.find { it.id == fileId } ?: return
         viewModelScope.launch {
-            repository.renameFile(fileId, newName)
+            projectRepository.renameFile(file, newName)
+            val currentProject = _selectedProject.value ?: return@launch
+            _files.value = projectRepository.getFiles(currentProject)
+            _selectedFileId.value = _files.value.find { it.name == newName }?.id ?: ""
         }
     }
 
@@ -148,7 +184,7 @@ class LatexEditorViewModel(
     }
 
     fun save() {
-        _compilationLog.value = "Project saved locally."
+        _compilationLog.value = "Project saved to folder."
     }
 
     fun compile() {
@@ -158,30 +194,23 @@ class LatexEditorViewModel(
             _isCompiling.value = true
             _compilationLog.value = "Compiling at ${client.baseUrl}..."
             
-            val response = client.compileLatex(currentFileContent)
+            val allFiles = _files.value.associate { it.name to it.content }
+            val mainFileName = _files.value.find { it.id == _selectedFileId.value }?.name ?: "main.tex"
+            
+            val response = client.compileLatex(mainFileName, allFiles)
             
             _compiledPdfBase64.value = null 
             delay(50) 
             
             if (response.pdfBase64 != null) {
                 _compiledPdfBase64.value = response.pdfBase64
-                // Mocking page count detection (Real logic would parse PDF)
-                // For now, let's assume 1 page unless we want to do something smarter
-                _totalPages.value = 1 
             }
             _compilationLog.value = response.log
             _isCompiling.value = false
         }
     }
 
-    fun setPage(page: Int) {
-        if (page in 1.._totalPages.value) {
-            _currentPage.value = page
-        }
-    }
-
     fun exportPdf() {
-        // Real implementation would depend on platform
-        _compilationLog.value = "PDF exported. Path: [Local Project Folder]/output.pdf"
+        _compilationLog.value = "PDF export simulated."
     }
 }

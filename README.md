@@ -13,10 +13,9 @@ Designed to provide an Overleaf-like experience cleanly and natively on your dev
 
 ## Project Structure
 
-* `composeApp`: Shared UI layout and components powered by Compose Multiplatform. Contains targets for Android, Desktop, Web, and iOS shared UI.
-* `iosApp`: The iOS application entry point, containing Xcode project files and SwiftUI wrappers.
-* `server`: The Ktor-based backend server application.
-* `shared`: The core shared codebase containing business logic, state management, and the `TexSpaceRepository` database (powered by SQLDelight).
+* `composeApp`: Shared UI layout and components powered by Compose Multiplatform.
+* `iosApp`: The iOS application entry point.
+* `shared`: The core shared codebase containing business logic, file-based project repository, and settings.
 
 ## Getting Started
 
@@ -41,17 +40,23 @@ You can run the application for various targets using the provided Gradle wrappe
 ./gradlew :composeApp:run
 ```
 
-**Server**
+**Web (JS)**
 ```shell
-./gradlew :server:run
-```
-
-**Web (Wasm / JS)**
-```shell
-./gradlew :composeApp:wasmJsBrowserDevelopmentRun
-# OR for JS target
 ./gradlew :composeApp:jsBrowserDevelopmentRun
 ```
 
 **iOS**
-Open the `iosApp` folder in Xcode and launch it from there, or use the respective IDE run configuration if available.
+Open the `iosApp` folder in Xcode and launch it from there.
+
+## Powered by TexCompiler
+
+TexSpace is proud to be powered by [TexCompiler](https://github.com/bbinxx/TexCompiler), a high-performance LaTeX compilation API. By offloading the heavy lifting of TeX processing to a dedicated backend, TexSpace remains lightweight and incredibly fast on all platforms.
+
+### Key Backend Features:
+- **Instant Compilation**: Optimized for rapid feedback loops.
+- **Multi-File Support**: Seamlessly handles complex project structures.
+- **Render-Hosted**: Reliable default service at `https://texcompiler.onrender.com`.
+
+## Open Source & Contributions
+
+TexSpace is fully open-source! We welcome contributions, bug reports, and feature requests. Our goal is to create the best mobile and desktop LaTeX experience for everyone.

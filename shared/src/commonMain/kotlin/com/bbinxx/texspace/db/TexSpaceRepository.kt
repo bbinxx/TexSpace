@@ -37,6 +37,6 @@ class TexSpaceRepository(private val database: TexSpaceDatabase) {
     }
 
     suspend fun getSetting(key: String): String? = withContext(Dispatchers.Default) {
-        queries.getSetting(key).executeAsOneOrNull()?.value
+        queries.getSetting(key).executeAsOneOrNull()
     }
 }

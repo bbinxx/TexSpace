@@ -1,20 +1,24 @@
 package com.bbinxx.texspace
 
+import androidx.compose.animation.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.*
 import androidx.compose.material.icons.filled.*
-import androidx.compose.material3.Icon
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.key.Key
@@ -27,29 +31,246 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 
-// Color Palette inspired by Overleaf Dark
+// Color Palette inspired by Overleaf Dark and Modern IDEs
 val SidebarBg = Color(0xFF2A2E33)
 val FileTreeBg = Color(0xFF1E2124)
 val EditorHeaderBg = Color(0xFF2E3238)
 val CompileGreen = Color(0xFF4C9F4C)
 val SidebarRailBg = Color(0xFF131516)
+val AccentColor = Color(0xFF64B5F6)
 
 @Composable
-fun App() {
+fun App(viewModel: LatexEditorViewModel) {
     MaterialTheme(
         colorScheme = darkColorScheme(
-            background = Color(0xFF131516),
-            surface = Color(0xFF1E2124),
-            primary = CompileGreen
+            background = Color(0xFF121212),
+            surface = Color(0xFF1E1E1E),
+            primary = CompileGreen,
+            secondary = AccentColor
         )
     ) {
+        val currentScreen by viewModel.currentScreen.collectAsState()
+
         Surface(modifier = Modifier.fillMaxSize()) {
-            val viewModel: LatexEditorViewModel = viewModel { LatexEditorViewModel() }
-            MainLayout(viewModel)
+            AnimatedContent(
+                targetState = currentScreen,
+                transitionSpec = {
+                    fadeIn() togetherWith fadeOut()
+                }
+            ) { screen ->
+                when (screen) {
+                    Screen.DASHBOARD -> DashboardScreen(viewModel)
+                    Screen.EDITOR -> MainLayout(viewModel)
+                }
+            }
         }
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun DashboardScreen(viewModel: LatexEditorViewModel) {
+    val projects by viewModel.projects.collectAsState()
+    val rootPath by viewModel.rootPath.collectAsState()
+    var showCreateDialog by remember { mutableStateOf(false) }
+    var newProjectName by remember { mutableStateOf("") }
+    var showSettings by remember { mutableStateOf(false) }
+
+    if (showCreateDialog) {
+        AlertDialog(
+            onDismissRequest = { showCreateDialog = false },
+            title = { Text("New LaTeX Project") },
+            text = {
+                TextField(
+                    value = newProjectName,
+                    onValueChange = { newProjectName = it },
+                    placeholder = { Text("Project Name") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            },
+            confirmButton = {
+                Button(onClick = {
+                    if (newProjectName.isNotBlank()) {
+                        viewModel.createProject(newProjectName)
+                        showCreateDialog = false
+                        newProjectName = ""
+                    }
+                }) {
+                    Text("Create")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showCreateDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
+    var showFolderPicker by remember { mutableStateOf(false) }
+
+    FolderPicker(
+        show = showFolderPicker,
+        onFolderPicked = { 
+            if (it != null) {
+                viewModel.updateRootPath(it)
+            }
+        },
+        onDismiss = { showFolderPicker = false }
+    )
+
+    if (showSettings) {
+        AlertDialog(
+            onDismissRequest = { showSettings = false },
+            title = { Text("Settings") },
+            text = {
+                Column {
+                    Text("Project Root Folder", style = MaterialTheme.typography.labelMedium)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        TextField(
+                            value = rootPath,
+                            onValueChange = { viewModel.updateRootPath(it) },
+                            modifier = Modifier.weight(1f),
+                            placeholder = { Text("/path/to/projects") },
+                            singleLine = true
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        IconButton(onClick = { showFolderPicker = true }) {
+                            Icon(Icons.Default.FolderOpen, "Select Folder")
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text("Compile Server", style = MaterialTheme.typography.labelMedium)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    val serverAddress by viewModel.serverAddress.collectAsState()
+                    TextField(
+                        value = serverAddress,
+                        onValueChange = { viewModel.updateServerAddress(it) },
+                        modifier = Modifier.fillMaxWidth(),
+                        placeholder = { Text("https://...") },
+                        singleLine = true
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showSettings = false }) {
+                    Text("Done")
+                }
+            }
+        )
+    }
+
+    Scaffold(
+        topBar = {
+            LargeTopAppBar(
+                title = { 
+                    Column {
+                        Text("TexSpace", fontWeight = FontWeight.Black, fontSize = 32.sp)
+                        Text("Local LaTeX IDE", fontSize = 14.sp, color = Color.Gray)
+                    }
+                },
+                actions = {
+                    IconButton(onClick = { showSettings = true }) {
+                        Icon(Icons.Default.Settings, null)
+                    }
+                },
+                colors = TopAppBarDefaults.largeTopAppBarColors(containerColor = Color.Transparent)
+            )
+        },
+        floatingActionButton = {
+            FloatingActionButton(
+                onClick = { showCreateDialog = true },
+                containerColor = CompileGreen,
+                contentColor = Color.White
+            ) {
+                Icon(Icons.Default.Add, null)
+            }
+        }
+    ) { padding ->
+        Column(modifier = Modifier.padding(padding).fillMaxSize()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp)
+                    .background(Color.White.copy(0.05f), RoundedCornerShape(12.dp))
+                    .padding(16.dp)
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.Folder, null, tint = AccentColor)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Location: ", color = Color.Gray, fontSize = 12.sp)
+                    Text(rootPath, fontWeight = FontWeight.Medium, fontSize = 12.sp)
+                }
+            }
+
+            if (projects.isEmpty()) {
+                Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Icon(
+                            Icons.Default.LibraryAdd, 
+                            null, 
+                            modifier = Modifier.size(80.dp), 
+                            tint = Color.Gray.copy(0.3f)
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text("No projects yet", fontWeight = FontWeight.Bold, color = Color.Gray)
+                        Text("Create your first LaTeX project to begin", fontSize = 12.sp, color = Color.Gray)
+                    }
+                }
+            } else {
+                LazyVerticalGrid(
+                    columns = GridCells.Adaptive(160.dp),
+                    contentPadding = PaddingValues(16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    items(projects) { project ->
+                        ProjectCard(project) {
+                            viewModel.openProject(project)
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun ProjectCard(project: LatexProject, onClick: () -> Unit) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(120.dp)
+            .clickable { onClick() },
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White.copy(0.07f))
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp).fillMaxSize(),
+            verticalArrangement = Arrangement.SpaceBetween
+        ) {
+            Icon(Icons.Default.Description, null, tint = CompileGreen, modifier = Modifier.size(32.dp))
+            Column {
+                Text(
+                    project.name, 
+                    fontWeight = FontWeight.Bold, 
+                    fontSize = 16.sp, 
+                    maxLines = 1,
+                    color = Color.White
+                )
+                Text(
+                    "Last mod: ${project.lastModified}", // Format this properly in real app
+                    fontSize = 11.sp, 
+                    color = Color.Gray
+                )
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainLayout(viewModel: LatexEditorViewModel) {
     val files by viewModel.files.collectAsState()
@@ -58,6 +279,7 @@ fun MainLayout(viewModel: LatexEditorViewModel) {
     val isCompiling by viewModel.isCompiling.collectAsState()
     val compilationLog by viewModel.compilationLog.collectAsState()
     val compiledPdfBase64 by viewModel.compiledPdfBase64.collectAsState()
+    val selectedProject by viewModel.selectedProject.collectAsState()
 
     val currentFile = files.find { it.id == selectedFileId }
     var activeTab by remember { mutableStateOf(0) } // 0: Editor, 1: Preview, 2: Files
@@ -67,6 +289,16 @@ fun MainLayout(viewModel: LatexEditorViewModel) {
 
         if (isMobile) {
             Scaffold(
+                topBar = {
+                    TopAppBar(
+                        title = { Text(selectedProject?.name ?: "Editor", fontSize = 18.sp) },
+                        navigationIcon = {
+                            IconButton(onClick = { viewModel.goBackToDashboard() }) {
+                                Icon(Icons.AutoMirrored.Filled.ArrowBack, null)
+                            }
+                        }
+                    )
+                },
                 bottomBar = {
                     NavigationBar(containerColor = SidebarRailBg) {
                         NavigationBarItem(
@@ -138,7 +370,10 @@ fun MainLayout(viewModel: LatexEditorViewModel) {
                     }
                 } else false
             }) {
-                SidebarRail(onMenuClick = { viewModel.toggleFileTree() })
+                SidebarRail(
+                    onMenuClick = { viewModel.toggleFileTree() },
+                    onBackClick = { viewModel.goBackToDashboard() }
+                )
 
                 if (isFileTreeVisible) {
                     FileTreePanel(
@@ -183,16 +418,17 @@ fun MainLayout(viewModel: LatexEditorViewModel) {
 }
 
 @Composable
-fun SidebarRail(onMenuClick: () -> Unit) {
+fun SidebarRail(onMenuClick: () -> Unit, onBackClick: () -> Unit) {
     Column(
         modifier = Modifier.width(48.dp).fillMaxHeight().background(SidebarRailBg),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.Top)
     ) {
         Spacer(modifier = Modifier.height(12.dp))
+        SidebarIcon(Icons.AutoMirrored.Filled.ArrowBack, onClick = onBackClick)
+        Divider(color = Color.White.copy(0.1f), modifier = Modifier.padding(horizontal = 8.dp))
         SidebarIcon(Icons.Default.Menu, onClick = onMenuClick)
         SidebarIcon(Icons.Default.AccountCircle)
-        SidebarIcon(Icons.Default.Settings)
     }
 }
 

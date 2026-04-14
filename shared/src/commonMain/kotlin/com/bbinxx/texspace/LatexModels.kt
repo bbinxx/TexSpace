@@ -11,8 +11,18 @@ data class LatexFile(
 )
 
 @Serializable
-data class CompileRequest(
-    val source: String
+data class LatexProject(
+    val id: String,
+    val name: String,
+    val path: String,
+    val lastModified: Long = 0L
+)
+
+@Serializable
+data class ApiCompileRequest(
+    val main_file: String,
+    val compiler: String = "pdflatex",
+    val files: Map<String, String>
 )
 
 @Serializable
@@ -28,4 +38,4 @@ data class LatexError(
     val message: String
 )
 
-const val SERVER_PORT = 8080
+

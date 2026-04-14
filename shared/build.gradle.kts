@@ -24,10 +24,7 @@ kotlin {
         browser()
     }
     
-    @OptIn(ExperimentalWasmDsl::class)
-    wasmJs {
-        browser()
-    }
+
     
     sourceSets {
         commonMain.dependencies {
@@ -36,29 +33,26 @@ kotlin {
             implementation(libs.ktor.client.core)
             implementation(libs.ktor.client.content.negotiation)
             implementation(libs.ktor.serialization.kotlinx.json)
-            implementation(libs.sqldelight.coroutines.extensions)
+            implementation(libs.sqldelightLib.coroutines.extensions)
+            implementation(libs.okio)
         }
         androidMain.dependencies {
             implementation(libs.ktor.client.okhttp)
-            implementation(libs.sqldelight.android.driver)
+            implementation(libs.sqldelightLib.android.driver)
         }
         iosMain.dependencies {
             implementation(libs.ktor.client.darwin)
-            implementation(libs.sqldelight.native-driver)
+            implementation(libs.sqldelightLib.native.driver)
         }
         jvmMain.dependencies {
             implementation(libs.ktor.client.okhttp)
-            implementation(libs.sqldelight.sqlite.driver)
+            implementation(libs.sqldelightLib.sqlite.driver)
         }
         jsMain.dependencies {
             implementation(libs.ktor.client.js)
-            implementation(libs.sqldelight.web-driver)
+            implementation(libs.sqldelightLib.web.driver)
         }
-        val wasmJsMain by getting {
-            dependencies {
-                implementation(libs.ktor.client.js)
-            }
-        }
+
         commonTest.dependencies {
             implementation(libs.kotlin.test)
         }
