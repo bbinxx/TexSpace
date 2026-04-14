@@ -30,7 +30,6 @@ class LatexEditorViewModel : ViewModel() {
 import io.ktor.util.decodeBase64Bytes
 import okio.FileSystem
 import okio.Path.Companion.toPath
-import kotlin.random.Random
 
 enum class Screen {
     DASHBOARD,
@@ -207,9 +206,7 @@ class LatexEditorViewModel(
         val project = _selectedProject.value ?: return
         viewModelScope.launch {
             projectRepository.renameProject(project, newName)
-            // Re-open project with new path/name
-            val updatedProjects = projectRepository.projects.value
-            val updatedProject = updatedProjects.find { it.name == newName }
+            val updatedProject = projectRepository.projects.value.find { it.name == newName }
             if (updatedProject != null) {
                 _selectedProject.value = updatedProject
             }
@@ -312,9 +309,8 @@ class LatexEditorViewModel(
             
             val response = client.compileLatex(mainFileName, allFiles)
             
-            _compiledPdfBase64.value = null 
-            delay(50) 
->>>>>>> dev
+            _compiledPdfBase64.value = null
+            delay(50)
             
             if (response.pdfBase64 != null) {
                 _compiledPdfBase64.value = response.pdfBase64
@@ -344,7 +340,6 @@ class LatexEditorViewModel(
                 val fileName = "${currentProject.name}_export.pdf"
                 val destFile = destDir / fileName
                 
-                // Decode base64
                 val bytes = pdfBase64.decodeBase64Bytes()
                 
                 fs.write(destFile) {
