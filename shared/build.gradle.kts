@@ -40,7 +40,7 @@ kotlin {
 =======
             implementation(libs.sqldelightLib.coroutines.extensions)
             implementation(libs.okio)
->>>>>>> dev
+            implementation(libs.kotlinx.datetime)
         }
         androidMain.dependencies {
             implementation(libs.ktor.client.okhttp)

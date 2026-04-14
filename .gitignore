@@ -1,55 +1,49 @@
-# Gradle
-.gradle/
-build/
+
+*.aar
+# Android
+*.ap_
+*.apk
 **/build/
-
-# Kotlin / KMP
-.kotlin/
-
-# IDEs
-.idea/
-*.iml
-*.iws
-*.ipr
-out/
-.project
+build/
+captures/
+*.class
 .classpath
-.settings/
-.vscode/
-
+.cxx/
+*.dex
+dist/
+.DS_Store
+.externalNativeBuild/
+.gradle/
+# Gradle
+.idea/
+# IDEs
+*.iml
+*.ipr
+*.iws
+# JS / Web
+.kotlin/
+# Kotlin / KMP
 # Local configuration
 local.properties
-
-# Android
-.navigation/
-captures/
-.externalNativeBuild/
-.cxx/
-*.apk
-*.aar
-*.ap_
-*.dex
-*.class
-
+*.log
+# Logs
 # macOS / iOS
-.DS_Store
-*.xcworkspace/
-xcuserdata/
+.navigation/
+node_modules/
+out/
+.project
+.settings/
+# Temporary
+*.tmp
+tmp/
+.vscode/
+.vscode/.vscode/
+.web/
 *.xcodeproj/*
 !*.xcodeproj/project.pbxproj
-!*.xcodeproj/xcshareddata/
 !*.xcodeproj/project.xcworkspace/
-!*.xcworkspace/contents.xcworkspacedata
+!*.xcodeproj/xcshareddata/
 **/xcshareddata/WorkspaceSettings.xcsettings
-
-# JS / Web
-node_modules/
-.web/
-dist/
-
-# Logs
-*.log
-
-# Temporary
-tmp/
-*.tmp
+xcuserdata/
+*.xcworkspace/
+!*.xcworkspace/contents.xcworkspacedata
