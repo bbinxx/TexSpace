@@ -5,6 +5,10 @@ plugins {
     alias(libs.plugins.kotlinMultiplatform)
     alias(libs.plugins.androidLibrary)
     alias(libs.plugins.kotlinSerialization)
+<<<<<<< HEAD
+=======
+    alias(libs.plugins.sqldelight)
+>>>>>>> dev
 }
 
 kotlin {
@@ -23,10 +27,7 @@ kotlin {
         browser()
     }
     
-    @OptIn(ExperimentalWasmDsl::class)
-    wasmJs {
-        browser()
-    }
+
     
     sourceSets {
         commonMain.dependencies {
@@ -35,7 +36,29 @@ kotlin {
             implementation(libs.ktor.client.core)
             implementation(libs.ktor.client.content.negotiation)
             implementation(libs.ktor.serialization.kotlinx.json)
+<<<<<<< HEAD
+=======
+            implementation(libs.sqldelightLib.coroutines.extensions)
+            implementation(libs.okio)
+>>>>>>> dev
         }
+        androidMain.dependencies {
+            implementation(libs.ktor.client.okhttp)
+            implementation(libs.sqldelightLib.android.driver)
+        }
+        iosMain.dependencies {
+            implementation(libs.ktor.client.darwin)
+            implementation(libs.sqldelightLib.native.driver)
+        }
+        jvmMain.dependencies {
+            implementation(libs.ktor.client.okhttp)
+            implementation(libs.sqldelightLib.sqlite.driver)
+        }
+        jsMain.dependencies {
+            implementation(libs.ktor.client.js)
+            implementation(libs.sqldelightLib.web.driver)
+        }
+
         commonTest.dependencies {
             implementation(libs.kotlin.test)
         }
@@ -51,5 +74,13 @@ android {
     }
     defaultConfig {
         minSdk = libs.versions.android.minSdk.get().toInt()
+    }
+}
+
+sqldelight {
+    databases {
+        create("TexSpaceDatabase") {
+            packageName.set("com.bbinxx.texspace.db")
+        }
     }
 }

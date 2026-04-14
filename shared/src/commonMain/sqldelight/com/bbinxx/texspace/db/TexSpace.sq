@@ -1,0 +1,39 @@
+CREATE TABLE latexFile (
+    id TEXT NOT NULL PRIMARY KEY,
+    name TEXT NOT NULL,
+    content TEXT NOT NULL,
+    lastModified INTEGER NOT NULL
+);
+
+CREATE TABLE settings (
+    key TEXT NOT NULL PRIMARY KEY,
+    value TEXT NOT NULL
+);
+
+-- Queries
+insertFile:
+INSERT OR REPLACE INTO latexFile(id, name, content, lastModified)
+VALUES (?, ?, ?, ?);
+
+getAllFiles:
+SELECT * FROM latexFile ORDER BY lastModified DESC;
+
+getFileById:
+SELECT * FROM latexFile WHERE id = ?;
+
+deleteFile:
+DELETE FROM latexFile WHERE id = ?;
+
+updateFileContent:
+UPDATE latexFile SET content = ?, lastModified = ? WHERE id = ?;
+
+renameFile:
+UPDATE latexFile SET name = ?, lastModified = ? WHERE id = ?;
+
+-- Settings Queries
+setSetting:
+INSERT OR REPLACE INTO settings(key, value)
+VALUES (?, ?);
+
+getSetting:
+SELECT value FROM settings WHERE key = ?;

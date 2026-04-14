@@ -34,11 +34,7 @@ kotlin {
         binaries.executable()
     }
     
-    @OptIn(ExperimentalWasmDsl::class)
-    wasmJs {
-        browser()
-        binaries.executable()
-    }
+
     
     sourceSets {
         androidMain.dependencies {
@@ -54,7 +50,10 @@ kotlin {
             implementation(libs.compose.uiToolingPreview)
             implementation(libs.androidx.lifecycle.viewmodelCompose)
             implementation(libs.androidx.lifecycle.runtimeCompose)
+            implementation(compose.materialIconsExtended)
             implementation(projects.shared)
+            implementation(libs.okio)
+            implementation(libs.ktor.client.core)
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)
@@ -62,6 +61,8 @@ kotlin {
         jvmMain.dependencies {
             implementation(compose.desktop.currentOs)
             implementation(libs.kotlinx.coroutinesSwing)
+            implementation(libs.ktor.client.cio)
+            implementation(libs.pdfbox)
         }
     }
 }

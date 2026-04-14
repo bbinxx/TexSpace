@@ -18,8 +18,15 @@ ktor = "3.3.3"
 logback = "1.5.24"
 material3 = "1.10.0-alpha05"
 kotlinx-serialization = "1.8.0"
+<<<<<<< HEAD
+=======
+pdfbox = "3.0.4"
+sqldelight = "2.0.2"
+okio = "3.9.1"
+>>>>>>> dev
 
 [libraries]
+pdfbox = { module = "org.apache.pdfbox:pdfbox", version.ref = "pdfbox" }
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
 kotlin-testJunit = { module = "org.jetbrains.kotlin:kotlin-test-junit", version.ref = "kotlin" }
 junit = { module = "junit:junit", version.ref = "junit" }
@@ -45,10 +52,26 @@ ktor-serverTestHost = { module = "io.ktor:ktor-server-test-host-jvm", version.re
 kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinx-coroutines" }
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinx-serialization" }
 ktor-client-core = { module = "io.ktor:ktor-client-core", version.ref = "ktor" }
+<<<<<<< HEAD
+=======
+ktor-client-cio = { module = "io.ktor:ktor-client-cio", version.ref = "ktor" }
+ktor-client-okhttp = { module = "io.ktor:ktor-client-okhttp", version.ref = "ktor" }
+ktor-client-darwin = { module = "io.ktor:ktor-client-darwin", version.ref = "ktor" }
+ktor-client-js = { module = "io.ktor:ktor-client-js", version.ref = "ktor" }
+>>>>>>> dev
 ktor-client-content-negotiation = { module = "io.ktor:ktor-client-content-negotiation", version.ref = "ktor" }
 ktor-serialization-kotlinx-json = { module = "io.ktor:ktor-serialization-kotlinx-json", version.ref = "ktor" }
 ktor-server-content-negotiation = { module = "io.ktor:ktor-server-content-negotiation-jvm", version.ref = "ktor" }
 ktor-server-cors = { module = "io.ktor:ktor-server-cors-jvm", version.ref = "ktor" }
+<<<<<<< HEAD
+=======
+sqldelightLib-android-driver = { module = "app.cash.sqldelight:android-driver", version.ref = "sqldelight" }
+sqldelightLib-native-driver = { module = "app.cash.sqldelight:native-driver", version.ref = "sqldelight" }
+sqldelightLib-sqlite-driver = { module = "app.cash.sqldelight:sqlite-driver", version.ref = "sqldelight" }
+sqldelightLib-web-driver = { module = "app.cash.sqldelight:web-worker-driver", version.ref = "sqldelight" }
+sqldelightLib-coroutines-extensions = { module = "app.cash.sqldelight:coroutines-extensions", version.ref = "sqldelight" }
+okio = { module = "com.squareup.okio:okio", version.ref = "okio" }
+>>>>>>> dev
 
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }
@@ -59,4 +82,10 @@ composeCompiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "k
 kotlinJvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
 ktor = { id = "io.ktor.plugin", version.ref = "ktor" }
 kotlinMultiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
+<<<<<<< HEAD
 kotlinSerialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
+=======
+kotlinSerialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
+sqldelight = { id = "app.cash.sqldelight", version.ref = "sqldelight" }
+
+>>>>>>> dev
