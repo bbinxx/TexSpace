@@ -531,22 +531,32 @@ fun TextFieldEditorPanel(
                     .fillMaxHeight()
                     .background(EditorBg)
             ) {
+                // ① Active line highlight — drawn FIRST so BasicTextField renders on top
+                val activeLineY = (currentLine * 20 + 4).dp
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(20.dp)
+                        .offset(y = activeLineY)
+                        .background(ActiveLineBg)
+                )
+
+                // ② Editor — always on top of the highlight
                 BasicTextField(
                     value = tfv,
                     onValueChange = { new ->
-                        // 1. Smart pairing
                         val paired = handleSmartInput(new, tfv)
                         tfv = paired
                         if (paired.text != source) onSourceChange(paired.text)
                     },
                     textStyle = TextStyle(
-                        color       = EditorFg,
-                        fontFamily  = FontFamily.Monospace,
-                        fontSize    = 14.sp,
-                        lineHeight  = 20.sp,
+                        color         = EditorFg,
+                        fontFamily    = FontFamily.Monospace,
+                        fontSize      = 14.sp,
+                        lineHeight    = 20.sp,
                         letterSpacing = 0.3.sp
                     ),
-                    cursorBrush = SolidColor(EditorCursor),
+                    cursorBrush          = SolidColor(EditorCursor),
                     visualTransformation = transformation,
                     modifier = Modifier
                         .fillMaxSize()
@@ -555,49 +565,25 @@ fun TextFieldEditorPanel(
                         .onKeyEvent { event ->
                             if (event.type == KeyEventType.KeyDown) {
                                 when {
-                                    // Tab for snippet expansion or indent
                                     event.key == Key.Tab -> {
                                         val expanded = tryExpandSnippet(tfv)
                                         if (expanded != null) {
-                                            tfv = expanded
-                                            onSourceChange(expanded.text)
+                                            tfv = expanded; onSourceChange(expanded.text)
                                         } else {
-                                            // Insert 4-space indent
                                             val cur = tfv.selection.start
                                             val newText = tfv.text.substring(0, cur) + "    " + tfv.text.substring(tfv.selection.end)
                                             val newTfv = tfv.copy(text = newText, selection = TextRange(cur + 4))
-                                            tfv = newTfv
-                                            onSourceChange(newText)
+                                            tfv = newTfv; onSourceChange(newText)
                                         }
                                         true
                                     }
-                                    // Cmd/Ctrl+F — find
-                                    (event.isMetaPressed || event.isCtrlPressed) && event.key == Key.F -> {
-                                        showFind = true; showReplace = false; true
-                                    }
-                                    // Cmd/Ctrl+H — replace
-                                    (event.isMetaPressed || event.isCtrlPressed) && event.key == Key.H -> {
-                                        showFind = true; showReplace = true; true
-                                    }
-                                    // Escape — close find
-                                    event.key == Key.Escape -> {
-                                        if (showFind) { showFind = false; showReplace = false; true } else false
-                                    }
+                                    (event.isMetaPressed || event.isCtrlPressed) && event.key == Key.F -> { showFind = true; showReplace = false; true }
+                                    (event.isMetaPressed || event.isCtrlPressed) && event.key == Key.H -> { showFind = true; showReplace = true; true }
+                                    event.key == Key.Escape -> { if (showFind) { showFind = false; showReplace = false; true } else false }
                                     else -> false
                                 }
                             } else false
                         }
-                )
-
-                // Active line highlighter (drawn behind text)
-                // We approximate Y position of active line
-                val activeLineY = (currentLine * 20).dp
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(20.dp)
-                        .offset(y = activeLineY + 4.dp)
-                        .background(ActiveLineBg)
                 )
             }
 

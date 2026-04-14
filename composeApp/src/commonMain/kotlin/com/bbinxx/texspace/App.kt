@@ -310,13 +310,12 @@ fun EmptyState() {
 
 @Composable
 fun ProjectCard(project: LatexProject, onClick: () -> Unit, onDelete: () -> Unit) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { onClick() },
+    Surface(
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.Transparent),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+        color = Color.Transparent,
+        tonalElevation = 0.dp
     ) {
         Box(
             modifier = Modifier
