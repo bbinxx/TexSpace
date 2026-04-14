@@ -15,7 +15,9 @@ data class LatexProject(
     val id: String,
     val name: String,
     val path: String,
-    val lastModified: Long = 0L
+    val lastModified: Long = 0L,
+    val createdAt: Long = 0L,
+    val fileCount: Int = 0
 )
 
 @Serializable
@@ -37,5 +39,3 @@ data class LatexError(
     val line: Int?,
     val message: String
 )
-
-

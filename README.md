@@ -58,4 +58,4 @@ Alternatively, use the standard Gradle commands:
 TexSpace is open-source and welcomes contributions! Whether it's adding platform-specific features, improving syntax highlighting, or fixing bugs, feel free to open a PR.
 
 ---
-*Crafted with ❤️ by the TexSpace Team*
+*Crafted with ❤️ by Bibin*

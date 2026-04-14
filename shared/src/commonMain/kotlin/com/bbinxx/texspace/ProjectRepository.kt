@@ -37,27 +37,26 @@ class ProjectRepository(
             }
             
             val items = fileSystem.list(root)
-            println("Refreshing projects in $root. Found ${items.size} items.")
             
             val projectFolders = items.filter { 
                 try { 
-                    val metadata = fileSystem.metadata(it)
-                    println("Item: ${it.name}, isDir: ${metadata.isDirectory}")
-                    metadata.isDirectory 
-                } catch (e: Exception) { 
-                    println("Metadata error for ${it.name}: ${e.message}")
-                    false 
-                }
+                    fileSystem.metadata(it).isDirectory 
+                } catch (e: Exception) { false }
             }
             
             _projects.value = projectFolders.map { folder ->
+                val metadata = fileSystem.metadata(folder)
+                val files = try { fileSystem.list(folder).filter { fileSystem.metadata(it).isRegularFile } } catch (e: Exception) { emptyList() }
+                
                 LatexProject(
                     id = folder.name,
                     name = folder.name,
                     path = folder.toString(),
-                    lastModified = try { fileSystem.metadata(folder).lastModifiedAtMillis ?: 0L } catch (e: Exception) { 0L }
+                    lastModified = metadata.lastModifiedAtMillis ?: 0L,
+                    createdAt = metadata.lastModifiedAtMillis ?: 0L, // Placeholder
+                    fileCount = files.size
                 )
-            }
+            }.sortedByDescending { it.lastModified }
         } catch (e: Exception) {
             println("Error refreshing projects: ${e.message}")
             _projects.value = emptyList()
@@ -70,7 +69,6 @@ class ProjectRepository(
             val projectPath = root / name
             if (!fileSystem.exists(projectPath)) {
                 fileSystem.createDirectories(projectPath)
-                // Create a default main.tex with professional starter code
                 val mainTex = projectPath / "main.tex"
                 val starterCode = """
                     \documentclass[12pt, a4paper]{article}
@@ -128,6 +126,17 @@ class ProjectRepository(
         }
     }
 
+    suspend fun renameProject(project: LatexProject, newName: String) = withContext(Dispatchers.IO) {
+        try {
+            val oldPath = project.path.toPath()
+            val newPath = oldPath.parent!! / newName
+            fileSystem.atomicMove(oldPath, newPath)
+            refreshProjects()
+        } catch (e: Exception) {
+            println("Error renaming project: ${e.message}")
+        }
+    }
+
     suspend fun copyFileToProject(project: LatexProject, sourcePath: String) = withContext(Dispatchers.IO) {
         try {
             val projectDir = project.path.toPath()
@@ -148,13 +157,17 @@ class ProjectRepository(
             fileSystem.list(path).filter { 
                 try {
                     val metadata = fileSystem.metadata(it)
-                    metadata.isRegularFile && (it.name.endsWith(".tex") || it.name.endsWith(".bib"))
+                    metadata.isRegularFile && (it.name.endsWith(".tex") || it.name.endsWith(".bib") || it.name.endsWith(".png") || it.name.endsWith(".jpg"))
                 } catch (e: Exception) { false }
             }.map { file ->
                 LatexFile(
                     id = file.toString(),
                     name = file.name,
-                    content = try { fileSystem.read(file) { readUtf8() } } catch (e: Exception) { "" },
+                    content = if (file.name.endsWith(".tex") || file.name.endsWith(".bib")) {
+                        try { fileSystem.read(file) { readUtf8() } } catch (e: Exception) { "" }
+                    } else {
+                        "Binary File"
+                    },
                     lastModified = try { fileSystem.metadata(file).lastModifiedAtMillis ?: 0L } catch (e: Exception) { 0L }
                 )
             }

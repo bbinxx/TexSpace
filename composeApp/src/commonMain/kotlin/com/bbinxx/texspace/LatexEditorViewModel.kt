@@ -62,7 +62,23 @@ class LatexEditorViewModel(
     private val _serverAddress = MutableStateFlow(initialBaseUrl)
     val serverAddress: StateFlow<String> = _serverAddress.asStateFlow()
 
+    private val _isFirstLaunch = MutableStateFlow(false)
+    val isFirstLaunch: StateFlow<Boolean> = _isFirstLaunch.asStateFlow()
+
+    fun markFirstLaunchComplete() {
+        _isFirstLaunch.value = false
+        viewModelScope.launch {
+            repository.setSetting("first_launch", "false")
+        }
+    }
+
     init {
+        viewModelScope.launch {
+            val firstLaunch = repository.getSetting("first_launch")
+            if (firstLaunch == null) {
+                _isFirstLaunch.value = true
+            }
+        }
         viewModelScope.launch {
             try {
                 val savedRoot = repository.getSetting("root_path")
@@ -141,6 +157,19 @@ class LatexEditorViewModel(
         _currentScreen.value = Screen.DASHBOARD
         _selectedProject.value = null
         _files.value = emptyList()
+    }
+
+    fun renameProject(newName: String) {
+        val project = _selectedProject.value ?: return
+        viewModelScope.launch {
+            projectRepository.renameProject(project, newName)
+            // Re-open project with new path/name
+            val updatedProjects = projectRepository.projects.value
+            val updatedProject = updatedProjects.find { it.name == newName }
+            if (updatedProject != null) {
+                _selectedProject.value = updatedProject
+            }
+        }
     }
 
     fun updateSource(newSource: String) {

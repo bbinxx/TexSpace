@@ -21,8 +21,10 @@ kotlinx-serialization = "1.8.0"
 pdfbox = "3.0.4"
 sqldelight = "2.0.2"
 okio = "3.9.1"
+kotlinx-datetime = "0.6.1"
 
 [libraries]
+kotlinx-datetime = { module = "org.jetbrains.kotlinx:kotlinx-datetime", version.ref = "kotlinx-datetime" }
 pdfbox = { module = "org.apache.pdfbox:pdfbox", version.ref = "pdfbox" }
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
 kotlin-testJunit = { module = "org.jetbrains.kotlin:kotlin-test-junit", version.ref = "kotlin" }

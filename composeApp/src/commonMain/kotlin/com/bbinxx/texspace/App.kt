@@ -18,6 +18,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontFamily
@@ -25,20 +26,24 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
-// Clean & Professional Color Palette
+import kotlinx.datetime.*
+
+// Modern Color Palette
 val SidebarRailBg = Color(0xFF0F111A)
-val FileTreeBg = Color(0xFF1A1C2E)
-val EditorHeaderBg = Color(0xFF1A1C2E)
-val SidebarBg = Color(0xFF1A1C2E)
-val CompileGreen = Color(0xFF4CAF50)
-val AccentColor = Color(0xFF64B5F6)
+val FileTreeBg = Color(0xFF131524)
+val EditorHeaderBg = Color(0xFF131524)
+val SidebarBg = Color(0xFF131524)
+val CompileGreen = Color(0xFF00C853)
+val AccentColor = Color(0xFF448AFF)
+val CardGradientStart = Color(0xFF1E213A)
+val CardGradientEnd = Color(0xFF161930)
 
 @Composable
 fun App(viewModel: LatexEditorViewModel) {
     MaterialTheme(
         colorScheme = darkColorScheme(
-            background = Color(0xFF0F111A), // Deep Night
-            surface = Color(0xFF1A1C2E),     // Dark Slate
+            background = Color(0xFF0A0C16), 
+            surface = Color(0xFF131524),     
             primary = CompileGreen,
             secondary = AccentColor,
             onSurface = Color(0xFFE0E0E0)
@@ -60,7 +65,9 @@ fun App(viewModel: LatexEditorViewModel) {
             AnimatedContent(
                 targetState = currentScreen,
                 transitionSpec = {
-                    (fadeIn() + scaleIn()) togetherWith (fadeOut() + scaleOut())
+                    val enter = fadeIn() + slideInHorizontally { if (targetState == Screen.EDITOR) it else -it }
+                    val exit = fadeOut() + slideOutHorizontally { if (targetState == Screen.EDITOR) -it else it }
+                    enter togetherWith exit
                 }
             ) { screen ->
                 when (screen) {
@@ -83,12 +90,47 @@ fun DashboardScreen(viewModel: LatexEditorViewModel) {
     var showSettings by remember { mutableStateOf(false) }
     var showFolderPickerRoot by remember { mutableStateOf(false) }
     var showFolderPickerDownload by remember { mutableStateOf(false) }
+    
+    var projectToDelete by remember { mutableStateOf<LatexProject?>(null) }
 
     FolderPicker(
         show = showFolderPickerRoot,
         onFolderPicked = { if (it != null) viewModel.updateRootPath(it) },
         onDismiss = { showFolderPickerRoot = false }
     )
+
+    val isFirstLaunch by viewModel.isFirstLaunch.collectAsState()
+
+    if (isFirstLaunch) {
+        AlertDialog(
+            onDismissRequest = { viewModel.markFirstLaunchComplete() },
+            title = {
+                Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
+                    Icon(Icons.Default.Celebration, null, modifier = Modifier.size(64.dp), tint = AccentColor)
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text("Welcome to TexSpace!", fontWeight = FontWeight.Bold, fontSize = 22.sp)
+                }
+            },
+            text = {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        "Your ultimate cross-platform LaTeX IDE is ready. Start by picking a workspace folder in Settings.",
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                        lineHeight = 20.sp
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text("🚀 Fast compilation\n📂 File-based projects\n📄 Real-time PDF preview", fontSize = 14.sp, color = AccentColor)
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = { viewModel.markFirstLaunchComplete() },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp)
+                ) { Text("Get Started") }
+            }
+        )
+    }
 
     FolderPicker(
         show = showFolderPickerDownload,
@@ -99,15 +141,15 @@ fun DashboardScreen(viewModel: LatexEditorViewModel) {
     if (showCreateDialog) {
         AlertDialog(
             onDismissRequest = { showCreateDialog = false },
-            title = { Text("New LaTeX Project") },
+            title = { Text("New Project") },
             text = {
-                TextField(
+                OutlinedTextField(
                     value = newProjectName,
                     onValueChange = { newProjectName = it },
-                    placeholder = { Text("Project Name") },
+                    placeholder = { Text("Enter project name...") },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
-                    colors = TextFieldDefaults.colors(focusedContainerColor = Color.Transparent, unfocusedContainerColor = Color.Transparent)
+                    shape = RoundedCornerShape(12.dp)
                 )
             },
             confirmButton = {
@@ -117,14 +159,27 @@ fun DashboardScreen(viewModel: LatexEditorViewModel) {
                         showCreateDialog = false
                         newProjectName = ""
                     }
-                }) {
-                    Text("Create")
-                }
+                }) { Text("Create") }
             },
             dismissButton = {
-                TextButton(onClick = { showCreateDialog = false }) {
-                    Text("Cancel")
-                }
+                TextButton(onClick = { showCreateDialog = false }) { Text("Cancel") }
+            }
+        )
+    }
+
+    projectToDelete?.let { project ->
+        AlertDialog(
+            onDismissRequest = { projectToDelete = null },
+            title = { Text("Delete Project?", color = Color.Red) },
+            text = { Text("This will permanently delete the folder '${project.name}' and all its files.") },
+            confirmButton = {
+                Button(
+                    onClick = { viewModel.deleteProject(project); projectToDelete = null },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color.Red)
+                ) { Text("Delete") }
+            },
+            dismissButton = {
+                TextButton(onClick = { projectToDelete = null }) { Text("Cancel") }
             }
         )
     }
@@ -132,29 +187,27 @@ fun DashboardScreen(viewModel: LatexEditorViewModel) {
     if (showSettings) {
         AlertDialog(
             onDismissRequest = { showSettings = false },
-            title = { Text("Global Settings") },
+            title = { Text("Settings") },
             text = {
-                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    SettingItem("Project Root", rootPath) { showFolderPickerRoot = true }
-                    SettingItem("Download Location", downloadPath) { showFolderPickerDownload = true }
+                Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                    SettingItem("Project Workspace", rootPath) { showFolderPickerRoot = true }
+                    SettingItem("Export PDF Folder", downloadPath) { showFolderPickerDownload = true }
                     
                     val serverAddress by viewModel.serverAddress.collectAsState()
                     Column {
-                        Text("Compile Server", style = MaterialTheme.typography.labelMedium, color = AccentColor)
-                        TextField(
+                        Text("Remote Compiler", style = MaterialTheme.typography.labelMedium, color = AccentColor)
+                        OutlinedTextField(
                             value = serverAddress,
                             onValueChange = { viewModel.updateServerAddress(it) },
                             modifier = Modifier.fillMaxWidth(),
                             singleLine = true,
-                            colors = TextFieldDefaults.colors(focusedContainerColor = Color.Transparent, unfocusedContainerColor = Color.Transparent)
+                            shape = RoundedCornerShape(12.dp)
                         )
                     }
                 }
             },
             confirmButton = {
-                TextButton(onClick = { showSettings = false }) {
-                    Text("Close")
-                }
+                Button(onClick = { showSettings = false }) { Text("Close") }
             }
         )
     }
@@ -165,7 +218,7 @@ fun DashboardScreen(viewModel: LatexEditorViewModel) {
                 title = { 
                     Column {
                         Text("TexSpace", fontWeight = FontWeight.Black, fontSize = 28.sp, color = Color.White)
-                        Text("Cross-Platform LaTeX IDE", fontSize = 12.sp, color = AccentColor)
+                        Text("Manage your LaTeX universe", fontSize = 12.sp, color = AccentColor)
                     }
                 },
                 actions = {
@@ -177,13 +230,14 @@ fun DashboardScreen(viewModel: LatexEditorViewModel) {
             )
         },
         floatingActionButton = {
-            ExtendedFloatingActionButton(
+            LargeFloatingActionButton(
                 onClick = { showCreateDialog = true },
                 containerColor = CompileGreen,
                 contentColor = Color.White,
-                icon = { Icon(Icons.Default.Add, null) },
-                text = { Text("New Project") }
-            )
+                shape = RoundedCornerShape(20.dp)
+            ) {
+                Icon(Icons.Default.Add, null, modifier = Modifier.size(32.dp))
+            }
         }
     ) { padding ->
         Column(modifier = Modifier.padding(padding).fillMaxSize()) {
@@ -191,15 +245,16 @@ fun DashboardScreen(viewModel: LatexEditorViewModel) {
                 EmptyState()
             } else {
                 LazyVerticalGrid(
-                    columns = GridCells.Adaptive(200.dp),
+                    columns = GridCells.Adaptive(280.dp),
                     contentPadding = PaddingValues(16.dp),
                     horizontalArrangement = Arrangement.spacedBy(16.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
                     items(projects) { project ->
-                        ProjectCard(project, 
+                        ProjectCard(
+                            project = project, 
                             onClick = { viewModel.openProject(project) },
-                            onDelete = { viewModel.deleteProject(project) }
+                            onDelete = { projectToDelete = project }
                         )
                     }
                 }
@@ -212,71 +267,114 @@ fun DashboardScreen(viewModel: LatexEditorViewModel) {
 fun SettingItem(label: String, value: String, onPickerRequest: () -> Unit) {
     Column {
         Text(label, style = MaterialTheme.typography.labelMedium, color = AccentColor)
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        Spacer(modifier = Modifier.height(4.dp))
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(Color.White.copy(0.05f), RoundedCornerShape(12.dp))
+                .clickable { onPickerRequest() }
+                .padding(12.dp)
+        ) {
+            Icon(Icons.Default.Folder, null, tint = AccentColor, modifier = Modifier.size(20.dp))
+            Spacer(modifier = Modifier.width(12.dp))
             Text(
-                text = value.ifBlank { "Not set" },
+                text = value.ifBlank { "Select Location..." },
                 style = MaterialTheme.typography.bodySmall,
                 color = if (value.isBlank()) Color.Gray else Color.White,
                 modifier = Modifier.weight(1f),
                 maxLines = 1
             )
-            IconButton(onClick = onPickerRequest) {
-                Icon(Icons.Default.FolderOpen, null, tint = AccentColor, modifier = Modifier.size(20.dp))
-            }
+            Icon(Icons.Default.ChevronRight, null, tint = Color.Gray, modifier = Modifier.size(16.dp))
         }
-        HorizontalDivider(color = Color.White.copy(0.1f))
     }
 }
 
 @Composable
 fun EmptyState() {
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Icon(Icons.Default.LibraryAdd, null, modifier = Modifier.size(100.dp), tint = Color.Gray.copy(0.2f))
-            Spacer(modifier = Modifier.height(16.dp))
-            Text("No Projects Found", fontWeight = FontWeight.Bold, color = Color.Gray)
-            Text("Configure a root path or create a new project", fontSize = 12.sp, color = Color.Gray)
+        Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(32.dp)) {
+            Icon(Icons.Default.LibraryAdd, null, modifier = Modifier.size(120.dp), tint = Color.White.copy(0.05f))
+            Spacer(modifier = Modifier.height(20.dp))
+            Text("Your workspace is empty", fontWeight = FontWeight.Bold, fontSize = 20.sp, color = Color.White)
+            Text(
+                "Pick a root folder in settings or create a new project to start typesetting.", 
+                fontSize = 14.sp, 
+                color = Color.Gray,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                modifier = Modifier.padding(top = 8.dp)
+            )
         }
     }
 }
 
 @Composable
 fun ProjectCard(project: LatexProject, onClick: () -> Unit, onDelete: () -> Unit) {
-    var showMenu by remember { mutableStateOf(false) }
-
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .height(140.dp)
             .clickable { onClick() },
         shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White.copy(0.05f)),
+        colors = CardDefaults.cardColors(containerColor = Color.Transparent),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
-        Box(modifier = Modifier.fillMaxSize()) {
-            Column(
-                modifier = Modifier.padding(20.dp).fillMaxSize(),
-                verticalArrangement = Arrangement.SpaceBetween
-            ) {
-                Icon(Icons.Default.Description, null, tint = CompileGreen, modifier = Modifier.size(36.dp))
-                Column {
-                    Text(project.name, fontWeight = FontWeight.Bold, fontSize = 18.sp, color = Color.White, maxLines = 1)
-                    Text("Last modified: Just now", fontSize = 11.sp, color = Color.Gray)
+        Box(
+            modifier = Modifier
+                .background(
+                    Brush.verticalGradient(listOf(CardGradientStart, CardGradientEnd))
+                )
+                .padding(24.dp)
+        ) {
+            Column {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        modifier = Modifier
+                            .size(48.dp)
+                            .background(AccentColor.copy(0.1f), RoundedCornerShape(12.dp)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(Icons.Default.Article, null, tint = AccentColor, modifier = Modifier.size(24.dp))
+                    }
+                    Spacer(modifier = Modifier.width(16.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(project.name, fontWeight = FontWeight.Bold, fontSize = 18.sp, color = Color.White, maxLines = 1)
+                        Text("${project.fileCount} files", fontSize = 12.sp, color = AccentColor)
+                    }
+                    IconButton(onClick = onDelete) {
+                        Icon(Icons.Default.DeleteOutline, null, tint = Color.Gray.copy(0.5f))
+                    }
                 }
-            }
-            Box(modifier = Modifier.align(Alignment.TopEnd).padding(8.dp)) {
-                IconButton(onClick = { showMenu = true }) {
-                    Icon(Icons.Default.MoreVert, null, tint = Color.Gray)
-                }
-                DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
-                    DropdownMenuItem(
-                        text = { Text("Delete Project", color = Color.Red) },
-                        leadingIcon = { Icon(Icons.Default.Delete, null, tint = Color.Red) },
-                        onClick = { showMenu = false; onDelete() }
-                    )
+                Spacer(modifier = Modifier.height(24.dp))
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    InfoStamp("MODIFIED", formatTimestamp(project.lastModified))
+                    InfoStamp("CREATED", formatTimestamp(project.createdAt))
                 }
             }
         }
+    }
+}
+
+@Composable
+fun InfoStamp(label: String, value: String) {
+    Column {
+        Text(label, fontSize = 9.sp, fontWeight = FontWeight.Black, color = Color.Gray, letterSpacing = 1.sp)
+        Text(value, fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color.White.copy(0.7f))
+    }
+}
+
+fun formatTimestamp(ms: Long): String {
+    if (ms <= 0L) return "---"
+    try {
+        val instant = Instant.fromEpochMilliseconds(ms)
+        val tz = TimeZone.currentSystemDefault()
+        val dt = instant.toLocalDateTime(tz)
+        
+        val monthNames = listOf("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
+        val month = monthNames[dt.monthNumber - 1]
+        
+        return "$month ${dt.dayOfMonth}, ${dt.year}"
+    } catch (e: Exception) {
+        return "---"
     }
 }
 
@@ -293,6 +391,10 @@ fun MainLayout(viewModel: LatexEditorViewModel) {
 
     val currentFile = files.find { it.id == selectedFileId }
     var activeTab by remember { mutableStateOf(0) } // 0: Editor, 1: Preview, 2: Files
+    var isLogVisible by remember { mutableStateOf(false) }
+    
+    var showRenameDialog by remember { mutableStateOf(false) }
+    var renameValue by remember(selectedProject?.name) { mutableStateOf(selectedProject?.name ?: "") }
     
     var showFilePicker by remember { mutableStateOf(false) }
     FilePicker(
@@ -301,6 +403,30 @@ fun MainLayout(viewModel: LatexEditorViewModel) {
         onDismiss = { showFilePicker = false }
     )
 
+    if (showRenameDialog) {
+        AlertDialog(
+            onDismissRequest = { showRenameDialog = false },
+            title = { Text("Rename Project") },
+            text = {
+                OutlinedTextField(
+                    value = renameValue,
+                    onValueChange = { renameValue = it },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            },
+            confirmButton = {
+                Button(onClick = { 
+                    viewModel.renameProject(renameValue)
+                    showRenameDialog = false 
+                }) { Text("Rename") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showRenameDialog = false }) { Text("Cancel") }
+            }
+        )
+    }
+
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
         val isMobile = maxWidth < 800.dp
 
@@ -308,10 +434,24 @@ fun MainLayout(viewModel: LatexEditorViewModel) {
             Scaffold(
                 topBar = {
                     TopAppBar(
-                        title = { Text(selectedProject?.name ?: "Editor", fontSize = 18.sp, fontWeight = FontWeight.Bold) },
+                        title = { 
+                            Text(
+                                text = selectedProject?.name ?: "Editor", 
+                                fontSize = 18.sp, 
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.clickable { showRenameDialog = true }
+                            ) 
+                        },
                         navigationIcon = {
                             IconButton(onClick = { viewModel.goBackToDashboard() }) {
                                 Icon(Icons.AutoMirrored.Filled.ArrowBack, null)
+                            }
+                        },
+                        actions = {
+                            if (activeTab == 1) {
+                                IconButton(onClick = { isLogVisible = !isLogVisible }) {
+                                    Icon(Icons.Default.Terminal, null, tint = if (isLogVisible) AccentColor else Color.White)
+                                }
                             }
                         },
                         colors = TopAppBarDefaults.topAppBarColors(containerColor = SidebarRailBg)
@@ -371,8 +511,14 @@ fun MainLayout(viewModel: LatexEditorViewModel) {
                             )
                             Box(modifier = Modifier.weight(1f).background(Color.White)) {
                                 PdfPreviewPanel(pdfBase64 = compiledPdfBase64, modifier = Modifier.fillMaxSize())
+                                
+                                if (isLogVisible) {
+                                    BottomLogPanel(
+                                        compilationLog, 
+                                        modifier = Modifier.align(Alignment.BottomCenter).height(160.dp).background(Color.Black.copy(0.9f))
+                                    )
+                                }
                             }
-                            BottomLogPanel(compilationLog, modifier = Modifier.height(120.dp))
                         }
                     }
                 }
@@ -400,13 +546,31 @@ fun MainLayout(viewModel: LatexEditorViewModel) {
 
                 // Main Editor Area
                 Column(modifier = Modifier.weight(1.5f).fillMaxHeight()) {
-                    HeaderRow(title = currentFile?.name ?: "Select a file", isEditor = true)
+                    HeaderRow(
+                        title = currentFile?.name ?: "Select a file", 
+                        isEditor = true,
+                        onTitleClick = { showRenameDialog = true }
+                    )
                     EditorPanel(
                         source = currentFile?.content ?: "",
                         onSourceChange = { viewModel.updateSource(it) },
                         modifier = Modifier.weight(1f).fillMaxSize()
                     )
-                    BottomLogPanel(compilationLog)
+                    
+                    if (isLogVisible) {
+                        BottomLogPanel(compilationLog, modifier = Modifier.height(180.dp))
+                    } else {
+                        Surface(
+                            modifier = Modifier.fillMaxWidth().height(24.dp).clickable { isLogVisible = true },
+                            color = SidebarRailBg
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(horizontal = 8.dp)) {
+                                Icon(Icons.Default.Terminal, null, modifier = Modifier.size(12.dp), tint = Color.Gray)
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("SHOW LOGS", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Color.Gray)
+                            }
+                        }
+                    }
                 }
 
                 // Live Preview Area
@@ -459,49 +623,53 @@ fun HeaderRow(
     isEditor: Boolean, 
     onRecompile: (() -> Unit)? = null,
     onExport: (() -> Unit)? = null,
-    isCompiling: Boolean = false
+    isCompiling: Boolean = false,
+    onTitleClick: () -> Unit = {}
 ) {
     Surface(
         color = EditorHeaderBg,
         modifier = Modifier.fillMaxWidth().height(48.dp)
     ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = title, 
-                fontSize = 14.sp, 
-                fontWeight = FontWeight.Bold, 
-                color = if (isEditor) AccentColor else Color.White,
-                maxLines = 1,
-                modifier = Modifier.weight(1f)
-            )
-            
-            if (!isEditor) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    FilledTonalButton(
-                        onClick = { onRecompile?.invoke() },
-                        contentPadding = PaddingValues(horizontal = 16.dp),
-                        modifier = Modifier.height(32.dp),
-                        enabled = !isCompiling,
-                        colors = ButtonDefaults.filledTonalButtonColors(containerColor = CompileGreen, contentColor = Color.White)
-                    ) {
-                        if (isCompiling) {
-                            CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp, color = Color.White)
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("Compiling", fontSize = 12.sp)
-                        } else {
+        Box {
+            Row(
+                modifier = Modifier.padding(horizontal = 16.dp).fillMaxSize(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = title, 
+                    fontSize = 14.sp, 
+                    fontWeight = FontWeight.Bold, 
+                    color = if (isEditor) AccentColor else Color.White,
+                    maxLines = 1,
+                    modifier = Modifier.weight(1f).clickable { onTitleClick() }
+                )
+                
+                if (!isEditor) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        FilledTonalButton(
+                            onClick = { onRecompile?.invoke() },
+                            contentPadding = PaddingValues(horizontal = 16.dp),
+                            modifier = Modifier.height(32.dp),
+                            enabled = !isCompiling,
+                            colors = ButtonDefaults.filledTonalButtonColors(containerColor = CompileGreen, contentColor = Color.White)
+                        ) {
                             Icon(Icons.Default.PlayArrow, null, modifier = Modifier.size(16.dp))
                             Spacer(modifier = Modifier.width(4.dp))
                             Text("Compile", fontSize = 12.sp)
                         }
-                    }
-                    Spacer(modifier = Modifier.width(8.dp))
-                    IconButton(onClick = { onExport?.invoke() }, modifier = Modifier.size(32.dp)) {
-                        Icon(Icons.Default.FileDownload, "Download PDF", tint = Color.White, modifier = Modifier.size(20.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        IconButton(onClick = { onExport?.invoke() }, modifier = Modifier.size(32.dp)) {
+                            Icon(Icons.Default.FileDownload, "Download PDF", tint = Color.White, modifier = Modifier.size(20.dp))
+                        }
                     }
                 }
+            }
+            if (isCompiling) {
+                LinearProgressIndicator(
+                    modifier = Modifier.fillMaxWidth().height(2.dp).align(Alignment.BottomCenter),
+                    color = CompileGreen,
+                    trackColor = Color.Transparent
+                )
             }
         }
     }
@@ -521,22 +689,40 @@ fun FileTreePanel(
 ) {
     var showCreateDialog by remember { mutableStateOf(false) }
     var newFileName by remember { mutableStateOf("") }
+    
+    var fileToDelete by remember { mutableStateOf<String?>(null) }
 
     if (showCreateDialog) {
         AlertDialog(
             onDismissRequest = { showCreateDialog = false },
             title = { Text("New File") },
             text = {
-                TextField(value = newFileName, onValueChange = { newFileName = it }, placeholder = { Text("filename.tex") })
+                OutlinedTextField(value = newFileName, onValueChange = { newFileName = it }, placeholder = { Text("filename.tex") })
             },
             confirmButton = {
-                TextButton(onClick = { 
+                Button(onClick = { 
                     if (newFileName.isNotBlank()) {
                         onCreateFile(newFileName)
                         showCreateDialog = false
                         newFileName = ""
                     }
                 }) { Text("Create") }
+            }
+        )
+    }
+    
+    fileToDelete?.let { id ->
+        AlertDialog(
+            onDismissRequest = { fileToDelete = null },
+            title = { Text("Delete File?") },
+            text = { Text("This will permanently delete the file.") },
+            confirmButton = {
+                Button(onClick = { onDeleteFile(id); fileToDelete = null }, colors = ButtonDefaults.buttonColors(containerColor = Color.Red)) {
+                    Text("Delete")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { fileToDelete = null }) { Text("Cancel") }
             }
         )
     }
@@ -563,7 +749,7 @@ fun FileTreePanel(
                         file = file,
                         isSelected = file.id == selectedFileId,
                         onSelect = { onFileSelected(file.id) },
-                        onDelete = { onDeleteFile(file.id) },
+                        onDelete = { fileToDelete = file.id },
                         onRename = { onRenameFile(file.id, it) }
                     )
                 }
@@ -588,9 +774,9 @@ fun FileItem(
         AlertDialog(
             onDismissRequest = { showRenameDialog = false },
             title = { Text("Rename") },
-            text = { TextField(value = newName, onValueChange = { newName = it }) },
+            text = { OutlinedTextField(value = newName, onValueChange = { newName = it }) },
             confirmButton = {
-                TextButton(onClick = { 
+                Button(onClick = { 
                     onRename(newName)
                     showRenameDialog = false 
                 }) { Text("Rename") }
@@ -601,19 +787,23 @@ fun FileItem(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .height(32.dp)
-            .background(if (isSelected) AccentColor.copy(0.15f) else Color.Transparent, RoundedCornerShape(4.dp))
+            .height(36.dp)
+            .background(if (isSelected) AccentColor.copy(0.1f) else Color.Transparent, RoundedCornerShape(8.dp))
             .clickable { onSelect() }
-            .padding(horizontal = 8.dp),
+            .padding(horizontal = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Icon(
-            imageVector = if (file.name.endsWith(".tex")) Icons.Default.Description else Icons.Default.Article,
+            imageVector = when {
+                file.name.endsWith(".tex") -> Icons.Default.Description
+                file.name.endsWith(".png") || file.name.endsWith(".jpg") -> Icons.Default.Image
+                else -> Icons.Default.Article
+            },
             contentDescription = null,
             modifier = Modifier.size(16.dp),
             tint = if (isSelected) AccentColor else Color.Gray
         )
-        Spacer(modifier = Modifier.width(10.dp))
+        Spacer(modifier = Modifier.width(12.dp))
         Text(
             text = file.name, 
             fontSize = 13.sp, 
@@ -639,11 +829,11 @@ fun FileItem(
 @Composable
 fun BottomLogPanel(log: String, modifier: Modifier = Modifier.fillMaxWidth().height(100.dp)) {
     Surface(
-        color = Color(0xFF0A0C10),
+        color = SidebarRailBg,
         modifier = modifier.border(0.5.dp, Color.White.copy(0.05f))
     ) {
         Column(modifier = Modifier.padding(12.dp)) {
-            Text("OUTPUT LOG", fontWeight = FontWeight.Bold, fontSize = 10.sp, color = AccentColor)
+            Text("ENGINE LOGS", fontWeight = FontWeight.Bold, fontSize = 10.sp, color = AccentColor, letterSpacing = 1.sp)
             Spacer(modifier = Modifier.height(8.dp))
             LazyColumn(modifier = Modifier.fillMaxSize()) {
                 item {
@@ -651,7 +841,8 @@ fun BottomLogPanel(log: String, modifier: Modifier = Modifier.fillMaxWidth().hei
                         text = log,
                         style = MaterialTheme.typography.bodyMedium.copy(
                             fontSize = 11.sp,
-                            color = Color(0xFFB0B0B0)
+                            color = Color(0xFFB0B0B0),
+                            lineHeight = 16.sp
                         )
                     )
                 }

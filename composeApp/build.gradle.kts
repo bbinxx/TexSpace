@@ -54,6 +54,7 @@ kotlin {
             implementation(projects.shared)
             implementation(libs.okio)
             implementation(libs.ktor.client.core)
+            implementation(libs.kotlinx.datetime)
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)
