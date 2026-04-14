@@ -1,0 +1,115 @@
+name: Multi-Platform Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch: # Allows manual triggering from the Actions tab
+
+jobs:
+  build-android-web:
+    name: Build Android & Web
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: 'gradle'
+
+      - name: Build Android
+        run: ./gradlew :composeApp:assembleRelease :composeApp:bundleRelease
+
+      - name: Build Web
+        run: ./gradlew :composeApp:jsBrowserDistribution
+
+      - name: Zip Web Distribution
+        run: zip -r web-distribution.zip composeApp/build/dist/js/productionExecutable/
+
+      - name: Upload Android & Web Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-web-artifacts
+          path: |
+            composeApp/build/outputs/apk/release/*.apk
+            composeApp/build/outputs/bundle/release/*.aab
+            web-distribution.zip
+
+  build-desktop:
+    name: Build Desktop (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: 'gradle'
+
+      - name: Build Desktop Package
+        run: ./gradlew :composeApp:package
+
+      - name: Upload Desktop Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: desktop-artifacts-${{ matrix.os }}
+          path: |
+            composeApp/build/compose/binaries/main/deb/*.deb
+            composeApp/build/compose/binaries/main/msi/*.msi
+            composeApp/build/compose/binaries/main/dmg/*.dmg
+
+  build-ios:
+    name: Build iOS
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: 'gradle'
+
+      - name: Build iOS Framework
+        run: ./gradlew :composeApp:assembleXCFramework
+
+      - name: Zip iOS Framework
+        run: zip -r ios-framework.zip composeApp/build/XCFrameworks/release/
+
+      - name: Upload iOS Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-artifacts
+          path: ios-framework.zip
+
+  create-release:
+    name: Create GitHub Release
+    needs: [build-android-web, build-desktop, build-ios]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: List Artifacts
+        run: ls -R artifacts
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: artifacts/**/*
+          generate_release_notes: true
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
