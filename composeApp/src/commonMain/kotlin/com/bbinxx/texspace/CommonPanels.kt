@@ -54,14 +54,14 @@ private val FindBarBg       = Color(0xFF161829)
 class LatexVisualTransformation : VisualTransformation {
     private val commandRegex  = Regex("""\\[a-zA-Z*@]+""")
     private val keywordRegex  = Regex("""\\(documentclass|usepackage|newcommand|renewcommand|input|include|maketitle|tableofcontents|bibliography|bibliographystyle|title|author|date|label|ref|cite|footnote|caption|textbf|textit|emph|texttt|underline|url)(?![a-zA-Z])""")
-    private val envRegex      = Regex("""\\(begin|end)\{[^}]*}""")
+    private val envRegex      = Regex("""\\(?:begin|end)\{[^}]*\}""")
     private val mathInlineRegex = Regex("""\$[^$\n]*\$""")
-    private val mathDisplayRegex = Regex("""\$\$[\s\S]*?\$\$|\\begin\{equation\*?\}[\s\S]*?\\end\{equation\*?\}|\\begin\{align\*?\}[\s\S]*?\\end\{align\*?\}""")
+    private val mathDisplayRegex = Regex("""\$\$[\s\S]*?\$\$""")
     private val commentRegex  = Regex("""(?<!\\)%[^\n]*""")
     private val braceRegex    = Regex("""[{}]""")
     private val bracketRegex  = Regex("""[\[\]]""")
-    private val numberArgRegex = Regex("""(?<=\{)\d+(?=})""")
-    private val optArgRegex   = Regex("""(?<=\[)\d+(?=])""")
+    private val numberArgRegex = Regex("""(?<=\{)\d+(?=\})""")
+    private val optArgRegex   = Regex("""(?<=\[)\d+(?=\])""")
 
     override fun filter(text: AnnotatedString): TransformedText {
         val src = text.text
@@ -305,7 +305,7 @@ private fun StatusItem(icon: androidx.compose.ui.graphics.vector.ImageVector, la
 private fun BreadcrumbBar(source: String, cursorLine: Int) {
     val nearestSection = remember(source, cursorLine) {
         val lines = source.lines()
-        val sectionRegex = Regex("""\\(section|subsection|subsubsection)\{([^}]*)}""")
+        val sectionRegex = Regex("""\\(section|subsection|subsubsection)\{([^}]*)\}""")
         var found = "Document"
         for (i in cursorLine downTo 0) {
             val match = sectionRegex.find(lines.getOrElse(i) { "" })
