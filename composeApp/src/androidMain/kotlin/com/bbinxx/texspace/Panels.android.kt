@@ -25,7 +25,10 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import java.io.File
 import java.io.FileOutputStream
->>>>>>> dev
+import androidx.compose.ui.text.PlatformTextStyle
+
+@Composable
+actual fun getPlatformTextStyle(): PlatformTextStyle? = PlatformTextStyle(includeFontPadding = false)
 
 @Composable
 actual fun EditorPanel(

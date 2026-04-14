@@ -7,11 +7,10 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.IO
 import kotlinx.coroutines.withContext
 
 class ProjectRepository(
-    private val fileSystem: FileSystem = FileSystem.SYSTEM
+    private val fileSystem: FileSystem = defaultFileSystem
 ) {
     private val _projects = MutableStateFlow<List<LatexProject>>(emptyList())
     val projects = _projects.asStateFlow()
@@ -29,7 +28,7 @@ class ProjectRepository(
         }
     }
 
-    suspend fun refreshProjects() = withContext(Dispatchers.IO) {
+    suspend fun refreshProjects() = withContext(ioDispatcher) {
         val root = rootPath ?: return@withContext
         try {
             if (!fileSystem.exists(root)) {
@@ -63,7 +62,7 @@ class ProjectRepository(
         }
     }
 
-    suspend fun createProject(name: String): LatexProject? = withContext(Dispatchers.IO) {
+    suspend fun createProject(name: String): LatexProject? = withContext(ioDispatcher) {
         val root = rootPath ?: return@withContext null
         try {
             val projectPath = root / name
@@ -116,7 +115,7 @@ class ProjectRepository(
         }
     }
 
-    suspend fun deleteProject(project: LatexProject) = withContext(Dispatchers.IO) {
+    suspend fun deleteProject(project: LatexProject) = withContext(ioDispatcher) {
         try {
             val path = project.path.toPath()
             fileSystem.deleteRecursively(path)
@@ -126,7 +125,7 @@ class ProjectRepository(
         }
     }
 
-    suspend fun renameProject(project: LatexProject, newName: String) = withContext(Dispatchers.IO) {
+    suspend fun renameProject(project: LatexProject, newName: String) = withContext(ioDispatcher) {
         try {
             val oldPath = project.path.toPath()
             val newPath = oldPath.parent!! / newName
@@ -137,7 +136,7 @@ class ProjectRepository(
         }
     }
 
-    suspend fun copyFileToProject(project: LatexProject, sourcePath: String) = withContext(Dispatchers.IO) {
+    suspend fun copyFileToProject(project: LatexProject, sourcePath: String) = withContext(ioDispatcher) {
         try {
             val projectDir = project.path.toPath()
             val sourceFile = sourcePath.toPath()
@@ -149,7 +148,7 @@ class ProjectRepository(
         }
     }
 
-    suspend fun getFiles(project: LatexProject): List<LatexFile> = withContext(Dispatchers.IO) {
+    suspend fun getFiles(project: LatexProject): List<LatexFile> = withContext(ioDispatcher) {
         try {
             val path = project.path.toPath()
             if (!fileSystem.exists(path)) return@withContext emptyList()
@@ -177,7 +176,7 @@ class ProjectRepository(
         }
     }
 
-    suspend fun saveFile(file: LatexFile) = withContext(Dispatchers.IO) {
+    suspend fun saveFile(file: LatexFile) = withContext(ioDispatcher) {
         try {
             val path = file.id.toPath()
             fileSystem.write(path) {
@@ -188,7 +187,7 @@ class ProjectRepository(
         }
     }
 
-    suspend fun deleteFile(file: LatexFile) = withContext(Dispatchers.IO) {
+    suspend fun deleteFile(file: LatexFile) = withContext(ioDispatcher) {
         try {
             val path = file.id.toPath()
             fileSystem.delete(path)
@@ -197,7 +196,7 @@ class ProjectRepository(
         }
     }
 
-    suspend fun renameFile(file: LatexFile, newName: String): LatexFile = withContext(Dispatchers.IO) {
+    suspend fun renameFile(file: LatexFile, newName: String): LatexFile = withContext(ioDispatcher) {
         try {
             val oldPath = file.id.toPath()
             val newPath = oldPath.parent!! / newName

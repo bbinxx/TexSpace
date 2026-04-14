@@ -5,7 +5,7 @@ import app.cash.sqldelight.coroutines.asFlow
 import app.cash.sqldelight.coroutines.mapToList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import com.bbinxx.texspace.LatexFile
+import kotlinx.datetime.Clock
 
 class TexSpaceRepository(private val database: TexSpaceDatabase) {
     private val queries = database.texSpaceQueries
@@ -17,15 +17,15 @@ class TexSpaceRepository(private val database: TexSpaceDatabase) {
     }
 
     suspend fun createFile(id: String, name: String, content: String) = withContext(Dispatchers.Default) {
-        queries.insertFile(id, name, content, System.currentTimeMillis())
+        queries.insertFile(id, name, content, Clock.System.now().toEpochMilliseconds())
     }
 
     suspend fun updateFileContent(id: String, content: String) = withContext(Dispatchers.Default) {
-        queries.updateFileContent(content, System.currentTimeMillis(), id)
+        queries.updateFileContent(content, Clock.System.now().toEpochMilliseconds(), id)
     }
 
     suspend fun renameFile(id: String, name: String) = withContext(Dispatchers.Default) {
-        queries.renameFile(name, System.currentTimeMillis(), id)
+        queries.renameFile(name, Clock.System.now().toEpochMilliseconds(), id)
     }
 
     suspend fun deleteFile(id: String) = withContext(Dispatchers.Default) {
