@@ -23,7 +23,7 @@ import androidx.compose.ui.input.key.*
 import androidx.compose.ui.text.*
 import androidx.compose.ui.text.font.*
 import androidx.compose.ui.text.input.*
-import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.*
 import androidx.compose.ui.unit.*
 
 // ─── IDE THEME TOKENS ────────────────────────────────────────────────────────
@@ -517,7 +517,17 @@ fun TextFieldEditorPanel(
                             fontSize = 12.sp,
                             textAlign = TextAlign.End,
                             fontWeight = if (isActive) FontWeight.Bold else FontWeight.Normal,
-                            modifier = Modifier.padding(end = 8.dp, bottom = 2.dp).height(20.dp)
+                            modifier = Modifier
+                                .padding(end = 8.dp)
+                                .height(20.dp)
+                                .wrapContentHeight(Alignment.CenterVertically),
+                            style = TextStyle(
+                                platformStyle = PlatformTextStyle(includeFontPadding = false),
+                                lineHeightStyle = LineHeightStyle(
+                                    alignment = LineHeightStyle.Alignment.Center,
+                                    trim = LineHeightStyle.Trim.None
+                                )
+                            )
                         )
                     }
                     Spacer(Modifier.height(100.dp))
@@ -554,7 +564,12 @@ fun TextFieldEditorPanel(
                         fontFamily    = FontFamily.Monospace,
                         fontSize      = 14.sp,
                         lineHeight    = 20.sp,
-                        letterSpacing = 0.3.sp
+                        letterSpacing = 0.3.sp,
+                        platformStyle = PlatformTextStyle(includeFontPadding = false),
+                        lineHeightStyle = LineHeightStyle(
+                            alignment = LineHeightStyle.Alignment.Center,
+                            trim = LineHeightStyle.Trim.None
+                        )
                     ),
                     cursorBrush          = SolidColor(EditorCursor),
                     visualTransformation = transformation,
